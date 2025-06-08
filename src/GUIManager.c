@@ -35,6 +35,13 @@ void GUIManager_Init()
     manager.init = true;
     manager.root = Layout_Create();
     GUIManager_SizeRefresh();
+
+    for (int i = 0; i < 2; i++)
+    {
+        GUIManager_SizeRefresh();
+        GUIManager_Draw(true);
+        refresh();
+    }
 }
 
 void GUIManager_Destroy()

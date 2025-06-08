@@ -11,7 +11,7 @@
 #include "InputManager.h"
 #include "GUIManager.h"
 
-#define REF_TIME  (100)
+#define REF_TIME  (50)
 
 void onEvt(Layout * this, LayoutBubbleEvent* evt)
 {
@@ -71,26 +71,37 @@ int main()
 
   Logger_Open();
   GUIManager_Init();
+  
   InputManager_Init();
   
 
   Layout * root = GUIManager_GetRoot();
   buildTestGUI(root);
-  
+
   while (1)
   {
     long now = current_time();
     if (now - lastTime >= REF_TIME)
     {
       lastTime = now;
-            
-      GUIManager_SizeRefresh();
       
+      long s,e;
+      s = current_time();
+      
+      GUIManager_SizeRefresh();
       InputManager_Update();
       InputManager_GetKeyEvents(events, &events_count);
       GUIManager_OnKeys(events, events_count);
-      GUIManager_Draw(true);
+      GUIManager_Draw(false);
+      
+      e = current_time();
+      Logger_Log("Render Time: %ldms\n", e - s);
+
+      s = current_time();
       refresh();
+      e = current_time();
+      Logger_Log("Refresh Time: %ldms\n", e - s);
+
     }
   }
   
