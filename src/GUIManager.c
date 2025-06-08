@@ -1,7 +1,13 @@
 #include "GUIManager.h"
 #include "Logger.h"
 
-static bool manager_init;
+
+typedef struct GUIManager
+{
+    Layout* root;
+    bool init;
+} GUIManager;
+
 static GUIManager manager;
 
 // declerations
@@ -11,30 +17,30 @@ void getCurrTermSize(int* rows, int* cols);
 
 void GUIManager_Init()
 {
-    if (manager_init) return;
+    if (manager.init) return;
 
-    manager_init = true;
+    manager.init = true;
     manager.root = Layout_Create();
     GUIManager_SizeRefresh();
 }
 
 void GUIManager_Destroy()
 {
-    if (!manager_init) return;
+    if (!manager.init) return;
     Layout_Destroy(manager.root);
     manager.root = NULL;
-    manager_init = false;
+    manager.init = false;
 }
 
 Layout* GUIManager_GetRoot()
 {
-    if (!manager_init) return NULL;
+    if (!manager.init) return NULL;
     return manager.root;
 }
 
 void GUIManager_SizeRefresh()
 {
-    if (!manager_init) return;
+    if (!manager.init) return;
 
     int r,c;
     getCurrTermSize(&r, &c);

@@ -3,10 +3,6 @@
 
 #include "Layout.h"
 
-typedef struct GUIManager
-{
-    Layout* root;
-} GUIManager;
 
 void GUIManager_Init();
 void GUIManager_Destroy();

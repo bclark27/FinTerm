@@ -84,7 +84,7 @@ int main()
   Layout* c2 = c1->children[2];
   addChildren(c2, LayoutOrientation_H, 3);
   
-  Layout* temp = c2->children[1];
+  Layout* temp = c2->children[2];
   
   Layout_DetatchFromParent(temp);
   Layout_Destroy(temp);
@@ -114,13 +114,20 @@ int main()
             //     __Layout_ProcessClick(root, &mevent);
             //   }
             // }
-            
+      char ch;
+      ch = getch();
+      if (ch) Logger_Log("getct: 0x%02x, %c\n", ch, ch);
+      
+      if (ch == 0x1b) break;
+
       GUIManager_SizeRefresh();
       GUIManager_Draw(true);
       refresh();
     }
   }
   
+  GUIManager_Destroy();
+
   endwin();               // End ncurses mode
   
   return 0;

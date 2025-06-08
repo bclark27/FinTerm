@@ -8,7 +8,7 @@
 
 // PRIV DECLERATIONS
 bool layout_contains_point(Layout *layout, int x, int y);
-void compute_ratios(int total_size, struct Layout** elements, int* ret, int count);
+void compute_layout_sizes(int total_size, struct Layout** elements, int* ret, int count);
 void DrawThisLayout(Layout * l, bool force);
 void processClick(Layout * l, LayoutClickedEvent* evt);
 void removeArrayItem(void* arr, int eleSize, int eleCount, int idx);
@@ -28,6 +28,7 @@ void Layout_Init(Layout * l)
 {
     memset(l, 0, sizeof(Layout));
     l->sizeRatio = 1;
+    l->absSize = -1;
     l->orientation = LayoutOrientation_H;
     l->visible = true;
 }
@@ -101,7 +102,7 @@ void Layout_SizeRefresh(Layout * l)
     if (l->orientation == LayoutOrientation_V)
     {
         int curr_y = l->abs_y;
-        compute_ratios(l->height, l->children, ans, l->childrenCount);
+        compute_layout_sizes(l->height, l->children, ans, l->childrenCount);
         for (int i = 0; i < l->childrenCount; i++)
         {
             l->children[i]->width = l->width;
@@ -116,7 +117,7 @@ void Layout_SizeRefresh(Layout * l)
     else
     {
         int curr_x = l->abs_x;
-        compute_ratios(l->width, l->children, ans, l->childrenCount);
+        compute_layout_sizes(l->width, l->children, ans, l->childrenCount);
         for (int i = 0; i < l->childrenCount; i++)
         {
             l->children[i]->width = ans[i];
@@ -222,30 +223,47 @@ bool layout_contains_point(Layout *layout, int x, int y)
     return (x >= left && x <= right && y >= top && y <= bottom);
 }
 
-void compute_ratios(int total_size, struct Layout** elements, int* ret, int count) 
-{
+void compute_layout_sizes(int total_size, struct Layout** elements, int* ret, int count) {
     if (count <= 0 || total_size <= 0) return;
 
-    double total_weight = 0.0;
+    int remaining = total_size;
+    double total_ratio = 0.0;
+
+    // First pass: handle absolute sizes and visibility
     for (int i = 0; i < count; i++) {
-        total_weight += elements[i]->sizeRatio;
-    }
-    // First pass: compute ideal floating sizes and round down
-    int sum = 0;
-    double ideal_sizes[LAYOUT_MAX_DIV];
-    for (int i = 0; i < count; i++) {
-        ideal_sizes[i] = (elements[i]->sizeRatio / total_weight) * total_size;
-        ret[i] = (int)floor(ideal_sizes[i]);
-        sum += ret[i];
+        if (!elements[i]->visible) {
+            ret[i] = 0;
+        } else if (elements[i]->absSize >= 0) {
+            ret[i] = elements[i]->absSize;
+            remaining -= ret[i];
+        } else {
+            ret[i] = -1; // mark as ratio-sized
+            total_ratio += elements[i]->sizeRatio;
+        }
     }
 
-    // Distribute remaining pixels
-    int remaining = total_size - sum;
-    while (remaining > 0) {
+    if (remaining < 0) remaining = 0; // prevent overflow if absSizes exceed total
+
+    // Second pass: distribute remaining space based on ratio
+    double ideal_sizes[LAYOUT_MAX_DIV];
+    int sum_ratio_sizes = 0;
+
+    for (int i = 0; i < count; i++) {
+        if (!elements[i]->visible || elements[i]->absSize >= 0) continue;
+
+        ideal_sizes[i] = (elements[i]->sizeRatio / total_ratio) * remaining;
+        ret[i] = (int)floor(ideal_sizes[i]);
+        sum_ratio_sizes += ret[i];
+    }
+
+    // Distribute leftover pixels
+    int leftover = remaining - sum_ratio_sizes;
+    while (leftover > 0) {
         double max_fraction = -1.0;
         int max_index = -1;
 
         for (int i = 0; i < count; i++) {
+            if (!elements[i]->visible || elements[i]->absSize >= 0) continue;
             double fraction = ideal_sizes[i] - ret[i];
             if (fraction > max_fraction) {
                 max_fraction = fraction;
@@ -255,9 +273,9 @@ void compute_ratios(int total_size, struct Layout** elements, int* ret, int coun
 
         if (max_index >= 0) {
             ret[max_index]++;
-            remaining--;
+            leftover--;
         } else {
-            break;  // Should not happen
+            break;
         }
     }
 }
