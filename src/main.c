@@ -7,7 +7,8 @@
 #include <stdio.h>
 #include <panel.h>
 #include "Logger.h"
-
+#include "Common.h"
+#include "InputManager.h"
 #include "GUIManager.h"
 
 #define REF_TIME  (100)
@@ -27,12 +28,6 @@ void initTerm()
   mousemask(ALL_MOUSE_EVENTS, NULL);  // Enable mouse events
 }
 
-long currMs()
-{
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return (tv.tv_sec * 1000L) + (tv.tv_usec / 1000L);
-}
 
 void clicked(Layout * this, LayoutClickedEvent* evt)
 {
@@ -73,7 +68,8 @@ int main()
   
   initTerm();
   long lastTime = 0;
-  MEVENT mevent;
+
+  InputManager_Init();
   GUIManager_Init();
   Layout * root = GUIManager_GetRoot();
   addChildren(root, LayoutOrientation_V, 3);
@@ -91,7 +87,7 @@ int main()
 
   while (1)
   {
-    long now = currMs();
+    long now = current_time();
     if (now - lastTime >= REF_TIME)
     {
       lastTime = now;
@@ -114,11 +110,16 @@ int main()
             //     __Layout_ProcessClick(root, &mevent);
             //   }
             // }
-      char ch;
-      ch = getch();
-      if (ch) Logger_Log("getct: 0x%02x, %c\n", ch, ch);
+
+      InputManager_Update();
       
-      if (ch == 0x1b) break;
+      int events_count;
+      InputEvent events[INPUT_EVENT_BUFFER_SIZE];
+      InputManager_GetKeyEvents(events, &events_count);
+      for (int i = 0; i < events_count; i++)
+      {
+        Logger_Log("Key Event: %x, %c\n", events[i].keyCode, events[i].keyCode);
+      }
 
       GUIManager_SizeRefresh();
       GUIManager_Draw(true);

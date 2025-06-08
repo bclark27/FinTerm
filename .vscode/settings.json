@@ -2,6 +2,7 @@
     "files.associations": {
         "ncurses.h": "c",
         "stdlib.h": "c",
-        "stdarg.h": "c"
+        "stdarg.h": "c",
+        "inputmanager.h": "c"
     }
 }
