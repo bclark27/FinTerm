@@ -4,16 +4,70 @@
 #include <string.h>
 #include <math.h>
 
+#include "Logger.h"
+
 // PRIV DECLERATIONS
 bool layout_contains_point(Layout *layout, int x, int y);
 void compute_ratios(int total_size, struct Layout** elements, int* ret, int count);
 void DrawThisLayout(Layout * l, bool force);
 void processClick(Layout * l, LayoutClickedEvent* evt);
+void removeArrayItem(void* arr, int eleSize, int eleCount, int idx);
 
 // PUBLIC FUNCS
 
 
 
+Layout * Layout_Create()
+{
+    Layout* l = calloc(1, sizeof(Layout));
+    Layout_Init(l);
+    return l;
+}
+
+void Layout_Init(Layout * l)
+{
+    memset(l, 0, sizeof(Layout));
+    l->sizeRatio = 1;
+    l->orientation = LayoutOrientation_H;
+    l->visible = true;
+}
+
+void Layout_Destroy(Layout * l)
+{
+    if (!l) return;
+
+    if (l->onDestroy) l->onDestroy(l);
+    
+    // check if i am in the parent children
+    // if i am, silently remove self
+    if (l->parent)
+    {
+        for (int i = 0; i < l->parent->childrenCount; i++)
+        {
+            if (l->parent->children[i] == l)
+            {
+                removeArrayItem(l->parent->children, sizeof(Layout*), l->parent->childrenCount, i);
+                l->parent->childrenCount--;
+                break;
+            }
+        }
+
+        l->parent = NULL;
+    }
+
+    // call destroy on all my children
+    // they will also try to remove themselves from my children arr so we should go in reverse
+    for (int i = l->childrenCount - 1; i >= 0; i--)
+    {
+        Layout_Destroy(l->children[i]);
+    }
+    l->childrenCount = 0;
+
+
+    if (l->win) delwin(l->win);
+    l->win = NULL;
+    free(l);
+}
 
 void Layout_Draw(Layout * l, bool force)
 {
@@ -39,7 +93,7 @@ void Layout_SizeRefresh(Layout * l)
         delwin(l->win);
         l->win = NULL;
     }
-
+    
     l->win = newwin(l->height, l->width, l->abs_y, l->abs_x);
     DrawThisLayout(l, true);
 
@@ -75,92 +129,73 @@ void Layout_SizeRefresh(Layout * l)
         }
     }
     
+    
     for (int i = 0; i < l->childrenCount; i++)
     {
         Layout_SizeRefresh(l->children[i]);
     }
 }
 
-Layout * Layout_AddNewChild(Layout * l)
+bool Layout_AddChild(Layout * parent, Layout * child)
 {
-    if (!l || l->childrenCount >= LAYOUT_MAX_DIV) return NULL;
-    
-    Layout * n = __Layout_Create();
-    l->children[l->childrenCount] = n;
-    n->parent = l;
-    l->childrenCount++;
+    // check if there is space available
+    if (!parent || !child) return false;
+    if (parent->childrenCount >= LAYOUT_MAX_DIV) return false;
 
-    Layout_SizeRefresh(l);
-
-    return n;
-}
-
-bool Layout_RemoveChildPtr(Layout * l, Layout * c)
-{
-    if (!l || !c) return false;
-    
-    for (int i = 0; i < l->childrenCount; i++)
+    // if the child has a parent already, bad
+    if (child->parent)
     {
-        if (l->children[i] == c)
-        {
-            return Layout_RemoveChildIdx(l, i);
-        }
+        Layout_DetatchFromParent(child);
     }
 
-    return false;
-}
-
-bool Layout_RemoveChildIdx(Layout * l, int idx)
-{
-    if (idx < 0 || idx >= l->childrenCount) return false;
+    parent->children[parent->childrenCount++] = child;
+    child->parent = parent;
     
-    __Layout_Destroy(l->children[idx]);
-
-    int tail_count = (l->childrenCount - idx) - 1;
-    if (tail_count > 0) memmove(&l->children[idx], &l->children[idx + 1], tail_count * sizeof(Layout*));
-
-    l->childrenCount--;
-
-    Layout_SizeRefresh(l);
+    Layout_SizeRefresh(parent);
 
     return true;
 }
 
-void Layout_RemoveChildren(Layout * l)
+void Layout_DetatchFromParent(Layout * child)
 {
-    if (!l) return;
-
-    for (int i = 0; i < l->childrenCount; i++)
+    if (!child) return;
+    
+    if (child->parent)
     {
-        __Layout_Destroy(l->children[i]);
+        Layout * p = child->parent;
+        for (int i = 0; i < p->childrenCount; i++)
+        {
+            if (p->children[i] == child)
+            {
+                removeArrayItem(p->children, sizeof(Layout*), p->childrenCount, i);
+                p->childrenCount--;
+                break;
+            }
+        }
+        child->parent = NULL;
+        Layout_SizeRefresh(p);
     }
-
-    l->childrenCount = 0;
 }
 
-Layout * __Layout_Create()
+Layout * Layout_RemoveChildIdx(Layout * parent, int idx)
 {
-    Layout* l = calloc(1, sizeof(Layout));
-    l->sizeRatio = 1;
-    l->orientation = LayoutOrientation_H;
-    l->visible = true;
-    return l;
+    if (!parent || idx < 0 || idx >= parent->childrenCount) return NULL;
+
+    Layout * child = parent->children[parent->childrenCount];
+    Layout_DetatchFromParent(child);
+    return child;
 }
 
-void __Layout_Destroy(Layout * l)
+bool Layout_DestroyChildIdx(Layout * parent, int idx)
 {
-    if (!l) return;
+    Layout * child = Layout_RemoveChildIdx(parent, idx);
+    Layout_Destroy(child);
 
-    Layout_RemoveChildren(l);
-
-    if (l->win)
-        delwin(l->win);
-    l->win = NULL;
-    l->parent = NULL;
-    free(l);
+    return child != NULL;
 }
 
-void __Layout_ProcessClick(Layout * l, MEVENT* mevent)
+
+void Layout_ProcessClick(Layout * l, MEVENT* mevent)
 {
     if (!l || !mevent) return;
 
@@ -195,7 +230,6 @@ void compute_ratios(int total_size, struct Layout** elements, int* ret, int coun
     for (int i = 0; i < count; i++) {
         total_weight += elements[i]->sizeRatio;
     }
-
     // First pass: compute ideal floating sizes and round down
     int sum = 0;
     double ideal_sizes[LAYOUT_MAX_DIV];
@@ -267,4 +301,18 @@ void processClick(Layout * l, LayoutClickedEvent* evt)
 
     if (l->onClick)
         l->onClick(l, evt);
+}
+
+void removeArrayItem(void* arr, int eleSize, int eleCount, int idx)
+{
+    if (!arr) return;
+    int tail_count = (eleCount - idx) - 1;
+    if (tail_count > 0)
+    {
+        memmove(
+            (char*)arr + idx * eleSize,
+            (char*)arr + (idx + 1) * eleSize,
+            tail_count * eleSize
+        );
+    }
 }

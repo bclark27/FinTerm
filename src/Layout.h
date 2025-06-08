@@ -21,6 +21,7 @@ struct LayoutClickedEvent;
 // callbacks
 typedef void (*LayoutDrawCallback)(struct Layout*, WINDOW *win, int x, int y, int width, int height);
 typedef void (*LayoutClickedCallback)(struct Layout*, struct LayoutClickedEvent*);
+typedef void (*OnLayoutDestroy)(struct Layout*);
 
 typedef struct Layout
 {
@@ -32,8 +33,10 @@ typedef struct Layout
     LayoutOrientation orientation;
     LayoutDrawCallback draw;
     LayoutClickedCallback onClick;
+    OnLayoutDestroy onDestroy;
 
     double sizeRatio;
+    int absSize;
     int width;
     int height;
     int abs_x;
@@ -60,17 +63,18 @@ typedef struct LayoutClickedEvent
 
 } LayoutClickedEvent;
 
+Layout * Layout_Create();
+void Layout_Init(Layout * l);
+void Layout_Destroy(Layout * l);
 void Layout_Draw(Layout * l, bool force);
 void Layout_SizeRefresh(Layout * l);
-Layout * Layout_AddNewChild(Layout * l);
-bool Layout_RemoveChildPtr(Layout * l, Layout * c);
-bool Layout_RemoveChildIdx(Layout * l, int idx);
-void Layout_RemoveChildren(Layout * l);
+bool Layout_AddChild(Layout * parent, Layout * child);
+
+void Layout_DetatchFromParent(Layout * child);
+Layout * Layout_RemoveChildIdx(Layout * parent, int idx);
+bool Layout_DestroyChildIdx(Layout * parent, int idx);
 
 
-Layout * __Layout_Create();
-bool __Layout_AddChild(Layout * l);
-void __Layout_Destroy(Layout * l);
-void __Layout_ProcessClick(Layout * l, MEVENT* mevent);
+void Layout_ProcessClick(Layout * l, MEVENT* mevent);
 
 #endif

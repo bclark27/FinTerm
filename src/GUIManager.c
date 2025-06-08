@@ -1,5 +1,5 @@
 #include "GUIManager.h"
-
+#include "Logger.h"
 
 static bool manager_init;
 static GUIManager manager;
@@ -14,13 +14,16 @@ void GUIManager_Init()
     if (manager_init) return;
 
     manager_init = true;
-    manager.root = __Layout_Create();
+    manager.root = Layout_Create();
     GUIManager_SizeRefresh();
 }
 
 void GUIManager_Destroy()
 {
     if (!manager_init) return;
+    Layout_Destroy(manager.root);
+    manager.root = NULL;
+    manager_init = false;
 }
 
 Layout* GUIManager_GetRoot()
@@ -36,7 +39,7 @@ void GUIManager_SizeRefresh()
     int r,c;
     getCurrTermSize(&r, &c);
 
-    if (manager.root->width != r || manager.root->height != c)
+    if (manager.root->width != c || manager.root->height != r)
     {
         manager.root->width = c;
         manager.root->height = r;

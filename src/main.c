@@ -6,29 +6,12 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <panel.h>
+#include "Logger.h"
 
 #include "GUIManager.h"
 
 #define REF_TIME  (100)
 
-
-FILE *logfile;
-
-void init_debug_log() {
-    logfile = fopen("debug.log", "w");
-}
-
-void debug_log(const char *format, ...) {
-    va_list args;
-    va_start(args, format);
-    vfprintf(logfile, format, args);
-    fflush(logfile); // Ensure it's written immediately
-    va_end(args);
-}
-
-void close_debug_log() {
-    fclose(logfile);
-}
 
 void initTerm()
 {
@@ -71,21 +54,20 @@ void draw(Layout * l, WINDOW * win, int x, int y, int width, int height)
 void addChildren(Layout * l, LayoutOrientation o, int count)
 {
   l->orientation = o;
-  Layout_RemoveChildren(l);
+  
   for (int i = 0; i < count; i++)
   {
-    Layout* c = Layout_AddNewChild(l);
+    Layout* c = Layout_Create();
     c->orientation = 0;
     c->draw = draw;
     c->onClick = clicked;
+    Layout_AddChild(l, c);
   }
-  
-  Layout_SizeRefresh(l);
 }
 
 int main()
 {
-  init_debug_log();
+  Logger_Open();
   
   
   
@@ -102,6 +84,11 @@ int main()
   Layout* c2 = c1->children[2];
   addChildren(c2, LayoutOrientation_H, 3);
   
+  Layout* temp = c2->children[1];
+  
+  Layout_DetatchFromParent(temp);
+  Layout_Destroy(temp);
+
   while (1)
   {
     long now = currMs();
@@ -128,15 +115,13 @@ int main()
             //   }
             // }
             
-            
+      GUIManager_SizeRefresh();
       GUIManager_Draw(true);
       refresh();
     }
   }
   
   endwin();               // End ncurses mode
-  
-  close_debug_log();
   
   return 0;
 }
