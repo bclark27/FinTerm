@@ -10,7 +10,6 @@
 bool layout_contains_point(Layout *layout, int x, int y);
 void compute_layout_sizes(int total_size, struct Layout** elements, int* ret, int count);
 void DrawThisLayout(Layout * l, bool force);
-void processClick(Layout * l, LayoutClickedEvent* evt);
 void removeArrayItem(void* arr, int eleSize, int eleCount, int idx);
 
 // PUBLIC FUNCS
@@ -195,18 +194,11 @@ bool Layout_DestroyChildIdx(Layout * parent, int idx)
     return child != NULL;
 }
 
-
-void Layout_ProcessClick(Layout * l, MEVENT* mevent)
+void Layout_BubbleUp(Layout * l, LayoutBubbleEvent* evt)
 {
-    if (!l || !mevent) return;
-
-    LayoutClickedEvent evt;
-    evt.mevent = mevent;
-    evt.click_x = mevent->x;
-    evt.click_y = mevent->y;
-    evt.left_click = mevent->bstate & BUTTON1_CLICKED;
-    evt.left_click = mevent->bstate & BUTTON2_CLICKED;
-    processClick(l, &evt);
+    if (!l) return;
+    if (l->onBubble) l->onBubble(l, evt);
+    if (l->parent) Layout_BubbleUp(l->parent, evt);
 }
 
 // PRIV
@@ -295,30 +287,20 @@ void DrawThisLayout(Layout * l, bool force)
     }
 }
 
-void processClick(Layout * l, LayoutClickedEvent* evt)
+Layout * Layout_GetChildNodeAtPoint(Layout * l, int x, int y)
 {
-    if (!l || !evt || !evt->mevent) return;
+    if (!l) return NULL;
+    if (!layout_contains_point(l, x, y)) return NULL;
+    if (l->childrenCount <= 0) return l;
 
     Layout* clickedChild = NULL;
     for (int i = 0; i < l->childrenCount; i++)
     {
-        if (layout_contains_point(l->children[i], evt->mevent->x, evt->mevent->y))
-        {
-            clickedChild = l->children[i];
-            processClick(l->children[i], evt);
-            break;
-        }
+        clickedChild = Layout_GetChildNodeAtPoint(l->children[i], x, y);
+        if (clickedChild) return clickedChild;
     }
 
-    if (!clickedChild)
-    {
-        evt->clickedLayout = l;
-        evt->click_rx = evt->click_x - l->abs_x;
-        evt->click_ry = evt->click_y - l->abs_y;
-    }
-
-    if (l->onClick)
-        l->onClick(l, evt);
+    return l;
 }
 
 void removeArrayItem(void* arr, int eleSize, int eleCount, int idx)

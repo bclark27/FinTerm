@@ -13,14 +13,19 @@ typedef enum LayoutOrientation
     LayoutOrientation_H,
 } LayoutOrientation;
 
+typedef enum LayoutBubbleEventType
+{
+    LayoutBubbleEventType_Clicked  // LayoutBubbleEvent_Clicked
+} LayoutBubbleEventType;
+
 // pre defs
 
 struct Layout;
-struct LayoutClickedEvent;
+struct LayoutBubbleEvent;
 
 // callbacks
 typedef void (*LayoutDrawCallback)(struct Layout*, WINDOW *win, int x, int y, int width, int height);
-typedef void (*LayoutClickedCallback)(struct Layout*, struct LayoutClickedEvent*);
+typedef void (*LayoutBubbleEventCallback)(struct Layout*, struct LayoutBubbleEvent*);
 typedef void (*OnLayoutDestroy)(struct Layout*);
 
 typedef struct Layout
@@ -32,7 +37,7 @@ typedef struct Layout
     struct Layout * parent;
     LayoutOrientation orientation;
     LayoutDrawCallback draw;
-    LayoutClickedCallback onClick;
+    LayoutBubbleEventCallback onBubble;
     OnLayoutDestroy onDestroy;
 
     double sizeRatio;
@@ -48,7 +53,7 @@ typedef struct Layout
     bool visible;
 } Layout;
 
-typedef struct LayoutClickedEvent
+typedef struct LayoutBubbleEvent_Clicked
 {
     MEVENT* mevent;
     Layout* clickedLayout;
@@ -61,7 +66,13 @@ typedef struct LayoutClickedEvent
     bool right_click;
     bool left_click;
 
-} LayoutClickedEvent;
+} LayoutBubbleEvent_Clicked;
+
+typedef struct LayoutBubbleEvent
+{
+    LayoutBubbleEventType type;
+    void* evt;
+} LayoutBubbleEvent;
 
 Layout * Layout_Create();
 void Layout_Init(Layout * l);
@@ -74,7 +85,7 @@ void Layout_DetatchFromParent(Layout * child);
 Layout * Layout_RemoveChildIdx(Layout * parent, int idx);
 bool Layout_DestroyChildIdx(Layout * parent, int idx);
 
-
-void Layout_ProcessClick(Layout * l, MEVENT* mevent);
+Layout * Layout_GetChildNodeAtPoint(Layout * l, int x, int y);
+void Layout_BubbleUp(Layout * l, LayoutBubbleEvent* evt);
 
 #endif

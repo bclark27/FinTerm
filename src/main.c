@@ -13,28 +13,15 @@
 
 #define REF_TIME  (100)
 
-
-void initTerm()
+void onEvt(Layout * this, LayoutBubbleEvent* evt)
 {
-  setlocale(LC_ALL, "en_US.UTF-8");
-  initscr();
-  start_color();
-  use_default_colors();
-  curs_set(FALSE);
-  keypad(stdscr, TRUE);   // Enable function keys like KEY_RESIZE
-  noecho();
-  cbreak();
-  nodelay(stdscr, TRUE);
-  mousemask(ALL_MOUSE_EVENTS, NULL);  // Enable mouse events
-}
-
-
-void clicked(Layout * this, LayoutClickedEvent* evt)
-{
-  if (this == evt->clickedLayout)
+  if (evt->type == LayoutBubbleEventType_Clicked)
   {
-    this->isDirty = true;
-    this->visible = false;
+    LayoutBubbleEvent_Clicked* evt_c = (LayoutBubbleEvent_Clicked*)evt->evt;
+    if (this == evt_c->clickedLayout)
+    {
+      this->isDirty = true;
+    }
   }
 }
 
@@ -43,7 +30,7 @@ void draw(Layout * l, WINDOW * win, int x, int y, int width, int height)
   box(win, 0, 0);
   mvwprintw(win, 1, 1, "%d, %d", width, height);
   mvwprintw(win, 1, 2, "%d", l->childrenCount);
-  if (!l->visible) mvwprintw(win, height / 2, width / 2, "X");
+  if (l == GUIManager_GetFocused()) mvwprintw(win, height / 2, width / 2, "X");
 }
 
 void addChildren(Layout * l, LayoutOrientation o, int count)
@@ -55,23 +42,13 @@ void addChildren(Layout * l, LayoutOrientation o, int count)
     Layout* c = Layout_Create();
     c->orientation = 0;
     c->draw = draw;
-    c->onClick = clicked;
+    c->onBubble = onEvt;
     Layout_AddChild(l, c);
   }
 }
 
-int main()
+void buildTestGUI(Layout* root)
 {
-  Logger_Open();
-  
-  
-  
-  initTerm();
-  long lastTime = 0;
-
-  InputManager_Init();
-  GUIManager_Init();
-  Layout * root = GUIManager_GetRoot();
   addChildren(root, LayoutOrientation_V, 3);
   
   Layout* c1 = root->children[1];
@@ -84,44 +61,34 @@ int main()
   
   Layout_DetatchFromParent(temp);
   Layout_Destroy(temp);
+}
 
+int main()
+{
+  long lastTime = 0;
+  int events_count;
+  InputEvent events[INPUT_EVENT_BUFFER_SIZE];
+
+  Logger_Open();
+  GUIManager_Init();
+  InputManager_Init();
+  
+
+  Layout * root = GUIManager_GetRoot();
+  buildTestGUI(root);
+  
   while (1)
   {
     long now = current_time();
     if (now - lastTime >= REF_TIME)
     {
       lastTime = now;
-      
-      // getTermSize(&r, &c);
-      // if (lr != r || lc != c)
-      // {
-        //   root->width = c;
-        //   root->height = r;
-        //   Layout_SizeRefresh(root);
-        // }
-        // lr=r;
-        // lc=c;
-        
-        // ch = getch();
-        // if (ch == KEY_MOUSE)
-        // {
-          //   if (getmouse(&mevent) == OK)
-          //   {
-            //     __Layout_ProcessClick(root, &mevent);
-            //   }
-            // }
-
-      InputManager_Update();
-      
-      int events_count;
-      InputEvent events[INPUT_EVENT_BUFFER_SIZE];
-      InputManager_GetKeyEvents(events, &events_count);
-      for (int i = 0; i < events_count; i++)
-      {
-        Logger_Log("Key Event: %x, %c\n", events[i].keyCode, events[i].keyCode);
-      }
-
+            
       GUIManager_SizeRefresh();
+      
+      InputManager_Update();
+      InputManager_GetKeyEvents(events, &events_count);
+      GUIManager_OnKeys(events, events_count);
       GUIManager_Draw(true);
       refresh();
     }
