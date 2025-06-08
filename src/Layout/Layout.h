@@ -7,6 +7,14 @@
 
 // types
 
+// not used in layout base, but many derived types might use it in some way
+typedef enum Alignment
+{
+    Alignment_Start,
+    Alignment_Center,
+    Alignment_End,
+} Alignment;
+
 typedef enum LayoutOrientation
 {
     LayoutOrientation_V,
@@ -24,21 +32,27 @@ struct Layout;
 struct LayoutBubbleEvent;
 
 // callbacks
-typedef void (*LayoutDrawCallback)(struct Layout*, WINDOW *win, int x, int y, int width, int height);
-typedef void (*LayoutBubbleEventCallback)(struct Layout*, struct LayoutBubbleEvent*);
-typedef void (*OnLayoutDestroy)(struct Layout*);
+typedef void (*LayoutDrawCallback)(struct Layout* l, WINDOW *win, int x, int y, int width, int height);
+typedef void (*LayoutBubbleEventCallback)(struct Layout* l, struct LayoutBubbleEvent* bbl);
+typedef void (*OnLayoutDestroy)(struct Layout* l);
+
+typedef struct Layout_VT
+{
+    LayoutDrawCallback draw;
+    LayoutBubbleEventCallback onBubble;
+    OnLayoutDestroy onDestroy;
+} Layout_VT;
 
 typedef struct Layout
 {
+    Layout_VT vtable;
+
     WINDOW * win;
 
     // this list should be mantained such that all in use children are compressed to the front of tthe list
     struct Layout * children[LAYOUT_MAX_DIV];
     struct Layout * parent;
     LayoutOrientation orientation;
-    LayoutDrawCallback draw;
-    LayoutBubbleEventCallback onBubble;
-    OnLayoutDestroy onDestroy;
 
     double sizeRatio;
     int absSize;

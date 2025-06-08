@@ -4,7 +4,7 @@
 #include <string.h>
 #include <math.h>
 
-#include "Logger.h"
+#include "../Logger.h"
 
 // PRIV DECLERATIONS
 bool layout_contains_point(Layout *layout, int x, int y);
@@ -25,18 +25,18 @@ Layout * Layout_Create()
 
 void Layout_Init(Layout * l)
 {
-    memset(l, 0, sizeof(Layout));
     l->sizeRatio = 1;
     l->absSize = -1;
     l->orientation = LayoutOrientation_H;
     l->visible = true;
+    l->isDirty = true;
 }
 
 void Layout_Destroy(Layout * l)
 {
     if (!l) return;
 
-    if (l->onDestroy) l->onDestroy(l);
+    if (l->vtable.onDestroy) l->vtable.onDestroy(l);
     
     // check if i am in the parent children
     // if i am, silently remove self
@@ -197,7 +197,7 @@ bool Layout_DestroyChildIdx(Layout * parent, int idx)
 void Layout_BubbleUp(Layout * l, LayoutBubbleEvent* evt)
 {
     if (!l) return;
-    if (l->onBubble) l->onBubble(l, evt);
+    if (l->vtable.onBubble) l->vtable.onBubble(l, evt);
     if (l->parent) Layout_BubbleUp(l->parent, evt);
 }
 
@@ -282,7 +282,7 @@ void DrawThisLayout(Layout * l, bool force)
         l->isDirty = false;
         
         werase(l->win);
-        if (l->draw) l->draw(l, l->win, l->abs_x, l->abs_y, l->width, l->height);
+        if (l->vtable.draw) l->vtable.draw(l, l->win, l->abs_x, l->abs_y, l->width, l->height);
         wnoutrefresh(l->win);
     }
 }

@@ -9,6 +9,7 @@
 #include "Logger.h"
 #include "Common.h"
 #include "InputManager.h"
+#include "Layout/Label.h"
 #include "GUIManager.h"
 
 #define REF_TIME  (50)
@@ -25,42 +26,38 @@ void onEvt(Layout * this, LayoutBubbleEvent* evt)
   }
 }
 
-void draw(Layout * l, WINDOW * win, int x, int y, int width, int height)
-{
-  box(win, 0, 0);
-  mvwprintw(win, 1, 1, "%d, %d", width, height);
-  mvwprintw(win, 1, 2, "%d", l->childrenCount);
-  if (l == GUIManager_GetFocused()) mvwprintw(win, height / 2, width / 2, "X");
-}
+// void draw(Layout * l, WINDOW * win, int x, int y, int width, int height)
+// {
+//   box(win, 0, 0);
+//   mvwprintw(win, 1, 1, "%d, %d", width, height);
+//   mvwprintw(win, 1, 2, "%d", l->childrenCount);
+//   if (l == GUIManager_GetFocused()) mvwprintw(win, height / 2, width / 2, "X");
+// }
 
-void addChildren(Layout * l, LayoutOrientation o, int count)
-{
-  l->orientation = o;
+// void addChildren(Layout * l, LayoutOrientation o, int count)
+// {
+//   l->orientation = o;
   
-  for (int i = 0; i < count; i++)
-  {
-    Layout* c = Layout_Create();
-    c->orientation = 0;
-    c->draw = draw;
-    c->onBubble = onEvt;
-    Layout_AddChild(l, c);
-  }
-}
+//   for (int i = 0; i < count; i++)
+//   {
+//     Layout* c = Layout_Create();
+//     c->orientation = 0;
+//     c->vtable.draw = draw;
+//     c->vtable.onBubble = onEvt;
+//     Layout_AddChild(l, c);
+//   }
+// }
 
 void buildTestGUI(Layout* root)
 {
-  addChildren(root, LayoutOrientation_V, 3);
-  
-  Layout* c1 = root->children[1];
-  addChildren(c1, LayoutOrientation_H, 3);
-  
-  Layout* c2 = c1->children[2];
-  addChildren(c2, LayoutOrientation_H, 3);
-  
-  Layout* temp = c2->children[2];
-  
-  Layout_DetatchFromParent(temp);
-  Layout_Destroy(temp);
+  for (int i = 0; i < 3; i++)
+  {
+    Label * l = Label_Create();
+    Label_SetTextCpy(l, "hi");
+    l->horzAlign = Alignment_Start + i;
+    l->vertAlign = Alignment_Start + i;
+    Layout_AddChild(root, (Layout*)l);
+  }
 }
 
 int main()
@@ -101,7 +98,6 @@ int main()
       refresh();
       e = current_time();
       Logger_Log("Refresh Time: %ldms\n", e - s);
-
     }
   }
   

@@ -3,6 +3,8 @@
         "ncurses.h": "c",
         "stdlib.h": "c",
         "stdarg.h": "c",
-        "inputmanager.h": "c"
+        "inputmanager.h": "c",
+        "layout.h": "c",
+        "label.h": "c"
     }
 }

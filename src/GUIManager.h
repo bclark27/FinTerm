@@ -2,7 +2,7 @@
 #define __GUI_MANAGER
 
 #include "InputManager.h"
-#include "Layout.h"
+#include "Layout/Layout.h"
 
 
 void GUIManager_Init();

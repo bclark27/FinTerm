@@ -1,85 +1,58 @@
-# tool macros
-CC := gcc# FILL: the compiler
-CCFLAGS := -Wall # FILL: compile flags
+# Tool macros
+CC := gcc
+CCFLAGS := -Wall
 DBGFLAGS := -Wall -Werror -g
 CCOBJFLAGS := $(CCFLAGS) -c
 LIBS := -lm -lncursesw -lpanel
 
-# compile macros
-TARGET_NAME := finterm# FILL: target name
+# Compile macros
+TARGET_NAME := finterm
 
-# path macros
+# Path macros
 BIN_PATH := bin
 OBJ_PATH := obj
 SRC_PATH := src
 DBG_PATH := debug
-LIB_PATH := $(BIN_PATH)/lib
-LIB_HEADER_PATH := $(LIB_PATH)/$(TARGET_NAME)
 
-ifeq ($(OS),Windows_NT)
-	TARGET_NAME := $(addsuffix .exe,$(TARGET_NAME))
-endif
-TARGET := $(BIN_PATH)/$(TARGET_NAME)
-TARGET_DEBUG := $(DBG_PATH)/$(TARGET_NAME)
-TARGET_LIB := $(LIB_PATH)/lib$(TARGET_NAME).a
+# Find all .c files recursively in SRC_PATH
+SRC := $(shell find $(SRC_PATH) -type f -name "*.c")
 
-# src files & obj files
-SRC := $(foreach x, $(SRC_PATH), $(wildcard $(addprefix $(x)/*,.c*)))
-OBJ := $(addprefix $(OBJ_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
-OBJ_DEBUG := $(addprefix $(DBG_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
+# Generate object file names with matching subdirectory structure under OBJ_PATH
+OBJ := $(patsubst $(SRC_PATH)/%.c,$(OBJ_PATH)/%.o,$(SRC))
 
-# clean files list
-DISTCLEAN_LIST := $(OBJ) \
-                  $(OBJ_DEBUG)
-CLEAN_LIST := $(TARGET) \
-			  $(TARGET_DEBUG) \
-			  $(DISTCLEAN_LIST) \
-			  $(TARGET_LIB)
+# Default target
+all: $(BIN_PATH)/$(TARGET_NAME)
 
-# default rule
-default: makedir all
+# Link the target
+$(BIN_PATH)/$(TARGET_NAME): $(OBJ)
+	@mkdir -p $(BIN_PATH)
+	$(CC) $(CCFLAGS) -o $@ $^ $(LIBS)
 
-# non-phony targets
-$(TARGET): $(OBJ)
-	$(CC) $(CCFLAGS) -o $@ $(OBJ) $(LIBS)
-
-$(OBJ_PATH)/%.o: $(SRC_PATH)/%.c*
+# Compile source files to object files
+$(OBJ_PATH)/%.o: $(SRC_PATH)/%.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CCOBJFLAGS) -o $@ $<
 
-$(DBG_PATH)/%.o: $(SRC_PATH)/%.c*
-	$(CC) $(CCOBJFLAGS) $(DBGFLAGS) -o $@ $<
-
-$(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(CCFLAGS) $(DBGFLAGS) $(OBJ_DEBUG) -o $@ $(LIBS)
-
-$(TARGET_LIB): $(OBJ)
-	$(CC) $(CCFLAGS) -c -o $@ $(OBJ) $(LIBS)
-
-# phony rules
-.PHONY: makedir
-makedir:
-	@mkdir -p $(BIN_PATH) $(OBJ_PATH) $(DBG_PATH) $(LIB_PATH) $(LIB_HEADER_PATH)
-
-.PHONY: all
-all: $(TARGET)
-
+# Debug build
 .PHONY: debug
-debug: $(TARGET_DEBUG)
+debug: CCFLAGS := $(DBGFLAGS)
+debug: clean $(DBG_PATH)/$(TARGET_NAME)
 
+$(DBG_PATH)/$(TARGET_NAME): $(OBJ)
+	@mkdir -p $(DBG_PATH)
+	$(CC) $(DBGFLAGS) -o $@ $^ $(LIBS)
+
+# Clean
 .PHONY: clean
 clean:
-	@echo CLEAN $(CLEAN_LIST)
-	@rm -f $(CLEAN_LIST)
-	@rm -rf $(LIB_HEADER_PATH)
+	rm -rf $(OBJ_PATH) $(BIN_PATH) $(DBG_PATH)
 
-.PHONY: lib
-lib:
-	@make
-	@ar ruv $(TARGET_LIB) $(OBJ)
-	@ranlib $(TARGET_LIB)
-	@cp ./$(SRC_PATH)/*.h ./$(LIB_HEADER_PATH)
+# Phony target to just build objects
+.PHONY: objects
+objects: $(OBJ)
 
-.PHONY: distclean
-distclean:
-	@echo CLEAN $(DISTCLEAN_LIST)
-	@rm -f $(DISTCLEAN_LIST)
+# Print variables (for debugging the makefile itself)
+.PHONY: vars
+vars:
+	@echo "SRC files: $(SRC)"
+	@echo "OBJ files: $(OBJ)"
