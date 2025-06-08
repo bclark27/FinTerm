@@ -5,6 +5,12 @@
 
 // types
 
+typedef enum LabelTextOption
+{
+    LabelTextOptions_Left,
+    LabelTextOptions_Center,
+    LabelTextOptions_Right
+} LabelTextOption;
 
 
 typedef struct Label
@@ -16,6 +22,7 @@ typedef struct Label
     char* str;
     Alignment vertAlign;
     Alignment horzAlign;
+    LabelTextOption textOption;
 } Label;
 
 // funcs

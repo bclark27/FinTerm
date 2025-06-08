@@ -53,7 +53,8 @@ void buildTestGUI(Layout* root)
   for (int i = 0; i < 3; i++)
   {
     Label * l = Label_Create();
-    Label_SetTextCpy(l, "hi");
+    Label_SetTextCpy(l, "hello there\nA\nB\nfriend");
+    l->textOption = LabelTextOptions_Center;
     l->horzAlign = Alignment_Start + i;
     l->vertAlign = Alignment_Start + i;
     Layout_AddChild(root, (Layout*)l);

@@ -10,6 +10,7 @@ void label_onDestroy(Layout* l);
 
 void label_disposeStr(Label * label);
 int label_lineCount(Label * label);
+int label_textWidth(Label * label);
 
 // vtable
 
@@ -64,9 +65,13 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     if (!label->strDisposed && label->str)
     {
         int len = strlen(label->str);
+        int textWidth = label_textWidth(label);
+        int textWidth_2 = textWidth / 2;
         int lc = label_lineCount(label);
-        int x = 0;
-        int y = 0;
+        int corner_x = 0;
+        int corner_y = 0;
+        int height_2 = height / 2;
+        int width_2 = width / 2;
 
         switch (label->horzAlign)
         {
@@ -74,12 +79,10 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
             case Alignment_Start:
                 break;
             case Alignment_Center:
-                int len_2 = len / 2;
-                int width_2 = width / 2;
-                x = width_2 - len_2 + 1;
+                corner_x = width_2 - textWidth_2 + 1;
                 break;
             case Alignment_End:
-                x = width - len;
+                corner_x = width - textWidth;
                 break;
         }
 
@@ -90,15 +93,61 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
                 break;
             case Alignment_Center:
                 int lc_2 = lc / 2;
-                int height_2 = height / 2;
-                y = height_2 - lc_2 + 1;
+                corner_y = height_2 - lc_2 + 1;
                 break;
             case Alignment_End:
-                y = height - lc;
+                corner_y = height - lc;
                 break;
         }
 
-        mvwprintw(win, y, x, "%s", label->str);
+        char* currLine = label->str;
+        int currLineNum = 0;
+        int currLineLen = 0;
+        for (int i = 0; i < len; i++)
+        {
+            if (label->str[i] == '\n')
+            {
+                label->str[i] = 0;
+                currLineLen = strlen(currLine);
+
+                int currLineX = 0;
+                switch (label->textOption)
+                {
+                    default:
+                    case LabelTextOptions_Left:
+                        break;
+                    case LabelTextOptions_Center:
+                        currLineX = textWidth_2 - (currLineLen / 2);
+                        break;
+                    case LabelTextOptions_Right:
+                        currLineX = textWidth - currLineLen;
+                        break;
+                }
+
+                mvwprintw(win, corner_y + currLineNum, corner_x + currLineX, "%s", currLine);
+                label->str[i] = '\n';
+                currLineNum++;
+                currLine = &(label->str[i + 1]);
+            }
+            else if (i == len - 1)
+            {
+                currLineLen = strlen(currLine);
+                int currLineX = 0;
+                switch (label->textOption)
+                {
+                    default:
+                    case LabelTextOptions_Left:
+                        break;
+                    case LabelTextOptions_Center:
+                        currLineX = textWidth_2 - (currLineLen / 2);
+                        break;
+                    case LabelTextOptions_Right:
+                        currLineX = textWidth - currLineLen;
+                        break;
+                }
+                mvwprintw(win, corner_y + currLineNum, corner_x + currLineX, "%s", currLine); 
+            }
+        }
     }
 }
 
@@ -136,4 +185,27 @@ int label_lineCount(Label * label)
     }
 
     return lc;
+}
+
+int label_textWidth(Label * label)
+{
+    if (!label || !label->str || label->strDisposed) return 0;
+
+    int len = strlen(label->str);
+    int longestLine = 0;
+    int currLine = 0;
+    for (int i = 0; i < len; i++)
+    {
+        if (label->str[i] == '\n')
+        {
+            longestLine = MAX(currLine, longestLine);
+            currLine = 0;
+        }
+        else
+        {
+            currLine++;
+        }
+    }
+
+    return longestLine;
 }

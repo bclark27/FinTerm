@@ -3,6 +3,8 @@
 
 #include <ncursesw/ncurses.h>
 
+#include "../Logger.h"
+
 #define LAYOUT_MAX_DIV  (20)
 
 // types
