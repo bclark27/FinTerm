@@ -201,6 +201,22 @@ void Layout_BubbleUp(Layout * l, LayoutBubbleEvent* evt)
     if (l->parent) Layout_BubbleUp(l->parent, evt);
 }
 
+void Layout_Hover(Layout* l, bool hover)
+{
+    if (!l) return;
+    l->isHover = hover;
+
+    if (hover)
+    {
+        if (l->vtable.onEnter) l->vtable.onEnter(l);
+    }
+    else
+    {
+        if (l->vtable.onExit) l->vtable.onExit(l);
+    }
+    
+}
+
 // PRIV
 
 bool layout_contains_point(Layout *layout, int x, int y)
@@ -287,20 +303,19 @@ void DrawThisLayout(Layout * l, bool force)
     }
 }
 
-Layout * Layout_GetChildNodeAtPoint(Layout * l, int x, int y)
+void Layout_GetChildNodeAtPoint(Layout * l, int x, int y, Layout* hovBuff[], int hovBuffArrSize, int* hovBuffCurrLen)
 {
-    if (!l) return NULL;
-    if (!layout_contains_point(l, x, y)) return NULL;
-    if (l->childrenCount <= 0) return l;
+    if (!l || !hovBuffCurrLen || !hovBuff) return;
+    if (*hovBuffCurrLen >= hovBuffArrSize) return;
+    if (!layout_contains_point(l, x, y)) return;
 
-    Layout* clickedChild = NULL;
+    hovBuff[*hovBuffCurrLen] = l;
+    (*hovBuffCurrLen)++;
+
     for (int i = 0; i < l->childrenCount; i++)
     {
-        clickedChild = Layout_GetChildNodeAtPoint(l->children[i], x, y);
-        if (clickedChild) return clickedChild;
+        Layout_GetChildNodeAtPoint(l->children[i], x, y, hovBuff, hovBuffArrSize, hovBuffCurrLen);
     }
-
-    return l;
 }
 
 void removeArrayItem(void* arr, int eleSize, int eleCount, int idx)

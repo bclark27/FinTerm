@@ -2,11 +2,16 @@
 #include "Logger.h"
 #include <ncursesw/ncurses.h>
 #include <locale.h>
+#include <string.h>
+
+#define MAX_DEPTH   (1000)
 
 typedef struct GUIManager
 {
     Layout* root;
     Layout* focused;
+    int hovBuffCurrSize;
+    Layout* hovBuffer[MAX_DEPTH];
     bool init;
 } GUIManager;
 
@@ -14,6 +19,7 @@ static GUIManager manager;
 
 // declerations
 void getCurrTermSize(int* rows, int* cols);
+void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize, Layout* newHovBuff[], int newHovBuffSize, Layout* exiting[], int* exitingSize, Layout* entering[], int* enteringSize);
 
 // PUBLIC
 
@@ -32,6 +38,7 @@ void GUIManager_Init()
     nodelay(stdscr, TRUE);
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);  // Enable mouse events
 
+    manager.hovBuffCurrSize = 0;
     manager.init = true;
     manager.root = Layout_Create();
     GUIManager_SizeRefresh();
@@ -68,31 +75,63 @@ void GUIManager_OnKeys(InputEvent* evts, int count)
 {
     for (int i = 0; i < count; i++)
     {
+        LayoutBubbleEvent bbl;
+
         if (evts[i].isMouse)
         {
-            Layout* clicked = Layout_GetChildNodeAtPoint(manager.root, evts[i].mevent.x, evts[i].mevent.y);
+            
+            Layout* newHovBuff[MAX_DEPTH];
+            int newHovBuffLen = 0;
+            Layout_GetChildNodeAtPoint(manager.root, evts[i].mevent.x, evts[i].mevent.y, newHovBuff, MAX_DEPTH, &newHovBuffLen);
+
+            Layout* entering[MAX_DEPTH];
+            Layout* exiting[MAX_DEPTH];
+            int enteringSize = 0;
+            int exitingSize = 0;
+            compareHovBuffs(
+                manager.hovBuffer, manager.hovBuffCurrSize,
+                newHovBuff, newHovBuffLen,
+                exiting, &exitingSize,
+                entering, &enteringSize
+            );
+
+            for (int i = 0; i < enteringSize; i++)
+            {
+                Layout_Hover(entering[i], true);
+            }
+            for (int i = 0; i < exitingSize; i++)
+            {
+                Layout_Hover(exiting[i], false);
+            }
+
+            memmove(manager.hovBuffer, newHovBuff, newHovBuffLen * sizeof(Layout*));
+            manager.hovBuffCurrSize = newHovBuffLen;
+
+            Logger_Log("A: %d\nB: %d\n\n", newHovBuffLen, exitingSize);
+/*
+            manager.hovered = interacting;
+            if (evts[i].leftClick || evts[i].rightClick)
+            {
+                manager.focused = interacting;
+            }
             if (clicked)
             {
                 manager.focused = clicked;
                 
-                LayoutBubbleEvent bbl;
+                
                 LayoutBubbleEvent_Clicked bbl_click;
-    
-                bbl_click.mevent = &evts[i].mevent;
-                bbl_click.click_x = evts[i].mevent.x;
-                bbl_click.click_y = evts[i].mevent.y;
                 bbl_click.click_rx = evts[i].mevent.x - clicked->abs_x;
                 bbl_click.click_ry = evts[i].mevent.y - clicked->abs_y;
-                bbl_click.right_click = evts[i].mevent.bstate & BUTTON3_CLICKED;
-                bbl_click.left_click = evts[i].mevent.bstate & BUTTON1_CLICKED;
                 bbl_click.clickedLayout = clicked;
-
+                bbl_click.event = &evts[i];
+                
                 bbl.type = LayoutBubbleEventType_Clicked;
                 bbl.evt = &bbl_click;
-
+                bbl.focused = manager.focused;
+                
                 Layout_BubbleUp(clicked, &bbl);
             }
-
+            */
         }
     }
 }
@@ -126,4 +165,50 @@ void getCurrTermSize(int* rows, int* cols)
   getmaxyx(stdscr, r, c);
   *rows = r;
   *cols = c;
+}
+
+void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize,
+    Layout* newHovBuff[], int newHovBuffSize,
+    Layout* exiting[], int* exitingSize,
+    Layout* entering[], int* enteringSize) 
+    {
+    // Initialize counters
+    *exitingSize = 0;
+    *enteringSize = 0;
+
+    // Find exiting: in og but not in new
+    for (int i = 0; i < ogHovBuffSize; ++i) 
+    {
+        Layout* l = ogHovBuff[i];
+        bool found = false;
+        for (int j = 0; j < newHovBuffSize; ++j) 
+        {
+            if (newHovBuff[j] == l) 
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            exiting[(*exitingSize)++] = l;
+        }
+    }
+
+    // Find entering: in new but not in og
+    for (int i = 0; i < newHovBuffSize; ++i) 
+    {
+        Layout* l = newHovBuff[i];
+        bool found = false;
+        for (int j = 0; j < ogHovBuffSize; ++j) 
+        {
+            if (ogHovBuff[j] == l) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) 
+        {
+            entering[(*enteringSize)++] = l;
+        }
+    }
 }

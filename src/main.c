@@ -4,6 +4,7 @@
 #include <locale.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <panel.h>
 #include "Logger.h"
@@ -13,6 +14,13 @@
 #include "GUIManager.h"
 
 #define REF_TIME  (50)
+
+
+void handle_sigint(int sig) {
+  InputManager_Destroy();
+  endwin();
+  exit(0);
+}
 
 void onEvt(Layout * this, LayoutBubbleEvent* evt)
 {
@@ -25,29 +33,6 @@ void onEvt(Layout * this, LayoutBubbleEvent* evt)
     }
   }
 }
-
-// void draw(Layout * l, WINDOW * win, int x, int y, int width, int height)
-// {
-//   box(win, 0, 0);
-//   mvwprintw(win, 1, 1, "%d, %d", width, height);
-//   mvwprintw(win, 1, 2, "%d", l->childrenCount);
-//   if (l == GUIManager_GetFocused()) mvwprintw(win, height / 2, width / 2, "X");
-// }
-
-// void addChildren(Layout * l, LayoutOrientation o, int count)
-// {
-//   l->orientation = o;
-  
-//   for (int i = 0; i < count; i++)
-//   {
-//     Layout* c = Layout_Create();
-//     c->orientation = 0;
-//     c->vtable.draw = draw;
-//     c->vtable.onBubble = onEvt;
-//     Layout_AddChild(l, c);
-//   }
-// }
-
 void buildTestGUI(Layout* root)
 {
   for (int i = 0; i < 3; i++)
@@ -61,8 +46,13 @@ void buildTestGUI(Layout* root)
   }
 }
 
+
 int main()
 {
+  signal(SIGINT, handle_sigint);  // Register Ctrl+C handler
+
+
+
   long lastTime = 0;
   int events_count;
   InputEvent events[INPUT_EVENT_BUFFER_SIZE];
@@ -93,15 +83,16 @@ int main()
       GUIManager_Draw(false);
       
       e = current_time();
-      Logger_Log("Render Time: %ldms\n", e - s);
+      //Logger_Log("Render Time: %ldms\n", e - s);
 
       s = current_time();
       refresh();
       e = current_time();
-      Logger_Log("Refresh Time: %ldms\n", e - s);
+      //Logger_Log("Refresh Time: %ldms\n", e - s);
     }
   }
-  
+
+  InputManager_Destroy();
   GUIManager_Destroy();
 
   endwin();               // End ncurses mode

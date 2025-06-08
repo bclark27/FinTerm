@@ -19,7 +19,9 @@ static InputManager manager;
 
 // declerations
 
-void parseCh(int ch, InputEvent* info);
+bool parseCh(int ch, InputEvent* info);
+void enable_mouse_tracking();
+void disable_mouse_tracking();
 
 // public
 
@@ -28,6 +30,13 @@ void InputManager_Init()
     memset(&manager, 0, sizeof(InputManager));
     manager_init = true;
     manager.currBuffIdx = INPUT_EVENT_BUFFER_SIZE - 1;
+    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+    enable_mouse_tracking();
+}
+
+void InputManager_Destroy()
+{
+    disable_mouse_tracking();
 }
 
 void InputManager_Update()
@@ -41,11 +50,15 @@ void InputManager_Update()
         if (ch == ERR) break;
 
         // get the next circular buffer idx
-        manager.currBuffIdx++;
-        if (manager.currBuffIdx >= INPUT_EVENT_BUFFER_SIZE) manager.currBuffIdx = 0;
-        parseCh(ch, &manager.buffer[manager.currBuffIdx]);
+        int nextIdx = manager.currBuffIdx + 1;
+        if (nextIdx >= INPUT_EVENT_BUFFER_SIZE) nextIdx = 0;
 
-        count++;
+        if (parseCh(ch, &manager.buffer[nextIdx]))
+        {
+            manager.currBuffIdx = nextIdx;
+            count++;
+        }
+        
     }
 
     manager.currUpdateSize = MIN(count, INPUT_EVENT_BUFFER_SIZE);
@@ -73,7 +86,7 @@ void InputManager_GetKeyEvents(InputEvent* events, int* count)
 
 // priv
 
-void parseCh(int ch, InputEvent* info)
+bool parseCh(int ch, InputEvent* info)
 {
     memset(info, 0, sizeof(InputEvent));
 
@@ -83,18 +96,34 @@ void parseCh(int ch, InputEvent* info)
     if (ch == KEY_MOUSE)
     {
         info->isMouse = getmouse(&info->mevent) == OK;
+        info->leftClick = info->mevent.bstate & BUTTON1_CLICKED;
+        info->midClick = info->mevent.bstate & BUTTON2_CLICKED;
+        info->rightClick = info->mevent.bstate & BUTTON3_CLICKED;
+        info->scrollUp = info->mevent.bstate & BUTTON4_PRESSED;
+        info->scrollDown = info->mevent.bstate & BUTTON5_PRESSED;
+
+        return info->isMouse && (
+            info->mevent.bstate & REPORT_MOUSE_POSITION ||
+            info->leftClick ||
+            info->midClick ||
+            info->rightClick ||
+            info->scrollUp ||
+            info->scrollDown
+        );
     } 
     else if (ch >= 1 && ch <= 26) 
     {
         // Ctrl + A = 1, Ctrl + B = 2, ..., Ctrl + Z = 26
         info->keyCode = ch + 'A' - 1;
         info->isCtrl = true;
+        return true;
     } 
     else if (ch >= 32 && ch < 127) 
     {
         // Printable ASCII characters
         info->isAscii = true;
         info->keyCode = ch;
+        return true;
     } 
     else 
     {
@@ -113,11 +142,26 @@ void parseCh(int ch, InputEvent* info)
             case KEY_ENTER:
                 // Handle special keys
                 info->isSpecial = true;
+                return true;
                 break;
             default:
                 // Possibly unknown
+                return false;
                 break;
         }
     }
     
+}
+
+
+void enable_mouse_tracking()
+{
+    printf("\033[?1003h\n");
+    fflush(stdout);
+}
+
+void disable_mouse_tracking() 
+{
+    printf("\033[?1003l\n"); // Disable mouse movement reporting
+    fflush(stdout);
 }

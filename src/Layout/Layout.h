@@ -4,6 +4,7 @@
 #include <ncursesw/ncurses.h>
 
 #include "../Logger.h"
+#include "../InputManager.h"
 
 #define LAYOUT_MAX_DIV  (20)
 
@@ -37,12 +38,16 @@ struct LayoutBubbleEvent;
 typedef void (*LayoutDrawCallback)(struct Layout* l, WINDOW *win, int x, int y, int width, int height);
 typedef void (*LayoutBubbleEventCallback)(struct Layout* l, struct LayoutBubbleEvent* bbl);
 typedef void (*OnLayoutDestroy)(struct Layout* l);
+typedef void (*OnLayoutPointerEnter)(struct Layout* l);
+typedef void (*OnLayoutPointerExit)(struct Layout* l);
 
 typedef struct Layout_VT
 {
     LayoutDrawCallback draw;
     LayoutBubbleEventCallback onBubble;
     OnLayoutDestroy onDestroy;
+    OnLayoutPointerEnter onEnter;
+    OnLayoutPointerExit onExit;
 } Layout_VT;
 
 typedef struct Layout
@@ -65,29 +70,21 @@ typedef struct Layout
     int childrenCount;
 
     bool isDirty;
-
+    bool isHover;
+    bool isFocus;
     bool visible;
 } Layout;
 
 typedef struct LayoutBubbleEvent_Clicked
 {
-    MEVENT* mevent;
+    InputEvent* event;
     Layout* clickedLayout;
-    int click_x;
-    int click_y;
-
-    int click_rx;
-    int click_ry;
-
-    bool right_click;
-    bool left_click;
-
 } LayoutBubbleEvent_Clicked;
 
 typedef struct LayoutBubbleEvent
 {
     LayoutBubbleEventType type;
-    void* evt;
+    void * evt;
 } LayoutBubbleEvent;
 
 Layout * Layout_Create();
@@ -101,7 +98,10 @@ void Layout_DetatchFromParent(Layout * child);
 Layout * Layout_RemoveChildIdx(Layout * parent, int idx);
 bool Layout_DestroyChildIdx(Layout * parent, int idx);
 
-Layout * Layout_GetChildNodeAtPoint(Layout * l, int x, int y);
+void Layout_GetChildNodeAtPoint(Layout * l, int x, int y, Layout* hovBuff[], int hovBuffArrSize, int* hovBuffCurrLen);
 void Layout_BubbleUp(Layout * l, LayoutBubbleEvent* evt);
+
+void Layout_Hover(Layout* l, bool hover);
+
 
 #endif

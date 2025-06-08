@@ -5,16 +5,22 @@
 #include <ncursesw/ncurses.h>
 
 // defines
-#define INPUT_EVENT_BUFFER_SIZE   (1000)
+#define INPUT_EVENT_BUFFER_SIZE   (10000)
 
 typedef struct InputEvent
 {
-    MEVENT mevent;
-    
     long timestamp;
+
+    MEVENT mevent;
+    bool isMouse;
+    bool rightClick;
+    bool leftClick;
+    bool midClick;
+    bool scrollUp;
+    bool scrollDown;
+    
     int raw;
     char keyCode;
-    bool isMouse;
     bool isAscii;
     bool isCtrl;
     bool isSpecial;
@@ -22,6 +28,7 @@ typedef struct InputEvent
 } InputEvent;
 
 void InputManager_Init();
+void InputManager_Destroy();
 void InputManager_Update();
 void InputManager_GetKeyEvents(InputEvent* events, int* count);
 //void KeysManager_GetKeyStrokes(KeyInfo ** )

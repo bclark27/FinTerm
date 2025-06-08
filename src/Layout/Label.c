@@ -7,6 +7,8 @@
 void label_draw(Layout*, WINDOW *win, int x, int y, int width, int height);
 void label_onBubble(Layout* l, LayoutBubbleEvent* bbl);
 void label_onDestroy(Layout* l);
+void label_onEnter(Layout* l);
+void label_onExit(Layout* l);
 
 void label_disposeStr(Label * label);
 int label_lineCount(Label * label);
@@ -19,6 +21,8 @@ static Layout_VT vtable =
     .draw = label_draw,
     .onBubble = label_onBubble,
     .onDestroy = label_onDestroy,
+    .onEnter = label_onEnter,
+    .onExit = label_onExit,
 };
 
 // public
@@ -61,7 +65,10 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     if (!l) return;
 
     Label * label = (Label*)l;
-    box(win, 0, 0);
+    if (l->isHover)
+    {
+        box(win, 0, 0);
+    }
     if (!label->strDisposed && label->str)
     {
         int len = strlen(label->str);
@@ -153,12 +160,26 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
 
 void label_onBubble(Layout* l, LayoutBubbleEvent* bbl)
 {
-    
+    if (bbl->type == LayoutBubbleEventType_Clicked)
+    {
+        LayoutBubbleEvent_Clicked * evt = (LayoutBubbleEvent_Clicked *)bbl->evt;
+        Logger_Log("Clicked:\n\tR:%d\n\tM:%d\n\tL:%d\n\tU:%d\n\tD:%d\n", evt->event->rightClick, evt->event->midClick, evt->event->leftClick, evt->event->scrollUp, evt->event->scrollDown);
+    }
 }
 
 void label_onDestroy(Layout* l)
 {
     label_disposeStr((Label*)l);
+}
+
+void label_onEnter(Layout* l)
+{
+    l->isDirty = true;
+}
+
+void label_onExit(Layout* l)
+{
+    l->isDirty = true;
 }
 
 void label_disposeStr(Label * label)
