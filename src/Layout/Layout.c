@@ -194,27 +194,42 @@ bool Layout_DestroyChildIdx(Layout * parent, int idx)
     return child != NULL;
 }
 
-void Layout_BubbleUp(Layout * l, LayoutBubbleEvent* evt)
+void Layout_Hover(Layout* l, InputEvent* e, bool hover)
 {
-    if (!l) return;
-    if (l->vtable.onBubble) l->vtable.onBubble(l, evt);
-    if (l->parent) Layout_BubbleUp(l->parent, evt);
-}
+    if (!l || !e) return;
 
-void Layout_Hover(Layout* l, bool hover)
-{
-    if (!l) return;
+    if (l->isHover == hover)
+    {
+        if (l->vtable.onPtrMove) l->vtable.onPtrMove(l, e);
+        return;
+    }
+
     l->isHover = hover;
-
     if (hover)
     {
-        if (l->vtable.onEnter) l->vtable.onEnter(l);
+        if (l->vtable.onPtrEnter) l->vtable.onPtrEnter(l, e);
     }
     else
     {
-        if (l->vtable.onExit) l->vtable.onExit(l);
+        if (l->vtable.onPtrExit) l->vtable.onPtrExit(l, e);
     }
+}
+
+void Layout_Focus(Layout* l, InputEvent* e, bool focus)
+{
+    if (!l || !e) return;
+    if (l->isFocus == focus) return;
+
     
+    l->isFocus = focus;
+    if (focus)
+    {
+        if (l->vtable.onFocus) l->vtable.onFocus(l, e);
+    }
+    else
+    {
+        if (l->vtable.onUnFocus) l->vtable.onUnFocus(l, e);
+    }
 }
 
 // PRIV

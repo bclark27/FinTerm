@@ -5,10 +5,12 @@
 // declerations
 
 void label_draw(Layout*, WINDOW *win, int x, int y, int width, int height);
-void label_onBubble(Layout* l, LayoutBubbleEvent* bbl);
 void label_onDestroy(Layout* l);
-void label_onEnter(Layout* l);
-void label_onExit(Layout* l);
+void label_onPtrEnter(Layout* l, InputEvent* e);
+void label_onPtrExit(Layout* l, InputEvent* e);
+void label_onPtrMove(Layout* l, InputEvent* e);
+void label_onFocus(Layout* l, InputEvent* e);
+void label_onUnFocus(Layout* l, InputEvent* e);
 
 void label_disposeStr(Label * label);
 int label_lineCount(Label * label);
@@ -19,10 +21,12 @@ int label_textWidth(Label * label);
 static Layout_VT vtable = 
 {
     .draw = label_draw,
-    .onBubble = label_onBubble,
     .onDestroy = label_onDestroy,
-    .onEnter = label_onEnter,
-    .onExit = label_onExit,
+    .onPtrEnter = label_onPtrEnter,
+    .onPtrExit = label_onPtrExit,
+    .onPtrMove = label_onPtrMove,
+    .onFocus = label_onFocus,
+    .onUnFocus = label_onUnFocus,
 };
 
 // public
@@ -65,7 +69,7 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     if (!l) return;
 
     Label * label = (Label*)l;
-    if (l->isHover)
+    if (l->isFocus)
     {
         box(win, 0, 0);
     }
@@ -158,26 +162,32 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     }
 }
 
-void label_onBubble(Layout* l, LayoutBubbleEvent* bbl)
-{
-    if (bbl->type == LayoutBubbleEventType_Clicked)
-    {
-        LayoutBubbleEvent_Clicked * evt = (LayoutBubbleEvent_Clicked *)bbl->evt;
-        Logger_Log("Clicked:\n\tR:%d\n\tM:%d\n\tL:%d\n\tU:%d\n\tD:%d\n", evt->event->rightClick, evt->event->midClick, evt->event->leftClick, evt->event->scrollUp, evt->event->scrollDown);
-    }
-}
-
 void label_onDestroy(Layout* l)
 {
     label_disposeStr((Label*)l);
 }
 
-void label_onEnter(Layout* l)
+void label_onPtrEnter(Layout* l, InputEvent* e)
+{
+    
+}
+
+void label_onPtrExit(Layout* l, InputEvent* e)
+{
+    
+}
+
+void label_onPtrMove(Layout* l, InputEvent* e)
+{
+
+}
+
+void label_onFocus(Layout* l, InputEvent* e)
 {
     l->isDirty = true;
 }
 
-void label_onExit(Layout* l)
+void label_onUnFocus(Layout* l, InputEvent* e)
 {
     l->isDirty = true;
 }

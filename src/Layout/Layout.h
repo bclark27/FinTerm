@@ -36,18 +36,28 @@ struct LayoutBubbleEvent;
 
 // callbacks
 typedef void (*LayoutDrawCallback)(struct Layout* l, WINDOW *win, int x, int y, int width, int height);
-typedef void (*LayoutBubbleEventCallback)(struct Layout* l, struct LayoutBubbleEvent* bbl);
 typedef void (*OnLayoutDestroy)(struct Layout* l);
-typedef void (*OnLayoutPointerEnter)(struct Layout* l);
-typedef void (*OnLayoutPointerExit)(struct Layout* l);
+
+// called with mouse movement event, but ONLY if it is the first move interaction int the layout
+typedef void (*OnLayoutPointerEnter)(struct Layout* l, InputEvent* e);
+// called with mouse movement event, but ONLY if it is the first movement outside of the layout
+typedef void (*OnLayoutPointerExit)(struct Layout* l, InputEvent* e);
+// called with mouse movement event, will be called for movement while pointer is in this layout, excluding the OnLayoutPointerEnter and OnLayoutPointerExit
+typedef void (*OnLayoutPointerMove)(struct Layout* l, InputEvent* e);
+// called only when the GUI manager decides this layout is now in focus
+typedef void (*OnLayoutPointerFocus)(struct Layout* l, InputEvent* e);
+// called only when the GUI manager decides this layout is no longer in focus
+typedef void (*OnLayoutPointerUnFocus)(struct Layout* l, InputEvent* e);
 
 typedef struct Layout_VT
 {
     LayoutDrawCallback draw;
-    LayoutBubbleEventCallback onBubble;
     OnLayoutDestroy onDestroy;
-    OnLayoutPointerEnter onEnter;
-    OnLayoutPointerExit onExit;
+    OnLayoutPointerEnter onPtrEnter;
+    OnLayoutPointerExit onPtrExit;
+    OnLayoutPointerMove onPtrMove;
+    OnLayoutPointerFocus onFocus;
+    OnLayoutPointerUnFocus onUnFocus;
 } Layout_VT;
 
 typedef struct Layout
@@ -75,18 +85,6 @@ typedef struct Layout
     bool visible;
 } Layout;
 
-typedef struct LayoutBubbleEvent_Clicked
-{
-    InputEvent* event;
-    Layout* clickedLayout;
-} LayoutBubbleEvent_Clicked;
-
-typedef struct LayoutBubbleEvent
-{
-    LayoutBubbleEventType type;
-    void * evt;
-} LayoutBubbleEvent;
-
 Layout * Layout_Create();
 void Layout_Init(Layout * l);
 void Layout_Destroy(Layout * l);
@@ -99,9 +97,9 @@ Layout * Layout_RemoveChildIdx(Layout * parent, int idx);
 bool Layout_DestroyChildIdx(Layout * parent, int idx);
 
 void Layout_GetChildNodeAtPoint(Layout * l, int x, int y, Layout* hovBuff[], int hovBuffArrSize, int* hovBuffCurrLen);
-void Layout_BubbleUp(Layout * l, LayoutBubbleEvent* evt);
 
-void Layout_Hover(Layout* l, bool hover);
+void Layout_Hover(Layout* l, InputEvent* e, bool hover);
+void Layout_Focus(Layout* l, InputEvent* e, bool focus);
 
 
 #endif

@@ -102,8 +102,14 @@ bool parseCh(int ch, InputEvent* info)
         info->scrollUp = info->mevent.bstate & BUTTON4_PRESSED;
         info->scrollDown = info->mevent.bstate & BUTTON5_PRESSED;
 
+        if (info->leftClick ||
+            info->midClick ||
+            info->rightClick ||
+            info->scrollUp ||
+            info->scrollDown) Logger_Log("ERERE\n");
+
         return info->isMouse && (
-            info->mevent.bstate & REPORT_MOUSE_POSITION ||
+            (info->mevent.bstate & REPORT_MOUSE_POSITION) ||
             info->leftClick ||
             info->midClick ||
             info->rightClick ||

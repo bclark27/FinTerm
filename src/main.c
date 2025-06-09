@@ -22,17 +22,6 @@ void handle_sigint(int sig) {
   exit(0);
 }
 
-void onEvt(Layout * this, LayoutBubbleEvent* evt)
-{
-  if (evt->type == LayoutBubbleEventType_Clicked)
-  {
-    LayoutBubbleEvent_Clicked* evt_c = (LayoutBubbleEvent_Clicked*)evt->evt;
-    if (this == evt_c->clickedLayout)
-    {
-      this->isDirty = true;
-    }
-  }
-}
 void buildTestGUI(Layout* root)
 {
   for (int i = 0; i < 3; i++)

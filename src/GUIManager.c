@@ -19,7 +19,12 @@ static GUIManager manager;
 
 // declerations
 void getCurrTermSize(int* rows, int* cols);
-void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize, Layout* newHovBuff[], int newHovBuffSize, Layout* exiting[], int* exitingSize, Layout* entering[], int* enteringSize);
+void compareHovBuffs(
+    Layout* ogHovBuff[], int ogHovBuffSize, 
+    Layout* newHovBuff[], int newHovBuffSize, 
+    Layout* exiting[], int* exitingSize, 
+    Layout* entering[], int* enteringSize,
+    Layout* stillHovering[], int* stillHoveringSize);
 
 // PUBLIC
 
@@ -75,63 +80,78 @@ void GUIManager_OnKeys(InputEvent* evts, int count)
 {
     for (int i = 0; i < count; i++)
     {
-        LayoutBubbleEvent bbl;
-
+        // first if it is a mouse event then redo all the hover states
+        // also redo the focus guy
         if (evts[i].isMouse)
         {
-            
             Layout* newHovBuff[MAX_DEPTH];
             int newHovBuffLen = 0;
             Layout_GetChildNodeAtPoint(manager.root, evts[i].mevent.x, evts[i].mevent.y, newHovBuff, MAX_DEPTH, &newHovBuffLen);
-
+            
             Layout* entering[MAX_DEPTH];
             Layout* exiting[MAX_DEPTH];
+            Layout* stillHovering[MAX_DEPTH];
             int enteringSize = 0;
             int exitingSize = 0;
+            int stillHoveringSize = 0;
             compareHovBuffs(
                 manager.hovBuffer, manager.hovBuffCurrSize,
                 newHovBuff, newHovBuffLen,
                 exiting, &exitingSize,
-                entering, &enteringSize
+                entering, &enteringSize,
+                stillHovering, &stillHoveringSize
             );
-
-            for (int i = 0; i < enteringSize; i++)
-            {
-                Layout_Hover(entering[i], true);
-            }
-            for (int i = 0; i < exitingSize; i++)
-            {
-                Layout_Hover(exiting[i], false);
-            }
-
+            
             memmove(manager.hovBuffer, newHovBuff, newHovBuffLen * sizeof(Layout*));
             manager.hovBuffCurrSize = newHovBuffLen;
 
-            Logger_Log("A: %d\nB: %d\n\n", newHovBuffLen, exitingSize);
-/*
-            manager.hovered = interacting;
-            if (evts[i].leftClick || evts[i].rightClick)
+            Layout* newFocus = NULL;
+            int lastIdx = manager.hovBuffCurrSize - 1;
+            if (lastIdx >= 0)
             {
-                manager.focused = interacting;
+                newFocus = manager.hovBuffer[lastIdx];
             }
-            if (clicked)
+
+            bool isFocusEvent = evts[i].leftClick;
+
+            // first do the unfocus and all exiting hovers
+            if (newFocus != manager.focused && 
+                manager.focused && 
+                isFocusEvent)
             {
-                manager.focused = clicked;
-                
-                
-                LayoutBubbleEvent_Clicked bbl_click;
-                bbl_click.click_rx = evts[i].mevent.x - clicked->abs_x;
-                bbl_click.click_ry = evts[i].mevent.y - clicked->abs_y;
-                bbl_click.clickedLayout = clicked;
-                bbl_click.event = &evts[i];
-                
-                bbl.type = LayoutBubbleEventType_Clicked;
-                bbl.evt = &bbl_click;
-                bbl.focused = manager.focused;
-                
-                Layout_BubbleUp(clicked, &bbl);
+                Layout_Focus(manager.focused, &evts[i], false);
             }
-            */
+
+            for (int k = 0; k < exitingSize; k++)
+            {
+                Layout_Hover(exiting[k], &evts[i], false);
+            }
+
+            // next do all the still hovering guys
+            for (int k = 0; k < stillHoveringSize; k++)
+            {
+                Layout_Hover(stillHovering[k], &evts[i], true);
+            }
+
+            for (int k = 0; k < enteringSize; k++)
+            {
+                Layout_Hover(entering[k], &evts[i], true);
+            }
+            
+            if (newFocus != manager.focused && 
+                newFocus && 
+                isFocusEvent)
+            {
+                Layout_Focus(newFocus, &evts[i], true);
+            }
+
+            if (isFocusEvent)
+            {
+                manager.focused = newFocus;
+            } 
+                
+
+            continue;
         }
     }
 }
@@ -170,11 +190,16 @@ void getCurrTermSize(int* rows, int* cols)
 void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize,
     Layout* newHovBuff[], int newHovBuffSize,
     Layout* exiting[], int* exitingSize,
-    Layout* entering[], int* enteringSize) 
+    Layout* entering[], int* enteringSize,
+    Layout* stillHovering[], int* stillHoveringSize) 
     {
     // Initialize counters
     *exitingSize = 0;
     *enteringSize = 0;
+    *stillHoveringSize = 0;
+
+    bool isExitOrEnter[MAX_DEPTH];
+    memset(isExitOrEnter, 0, sizeof isExitOrEnter);
 
     // Find exiting: in og but not in new
     for (int i = 0; i < ogHovBuffSize; ++i) 
@@ -191,6 +216,7 @@ void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize,
         }
         if (!found) {
             exiting[(*exitingSize)++] = l;
+            isExitOrEnter[i] = true;
         }
     }
 
@@ -209,6 +235,16 @@ void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize,
         if (!found) 
         {
             entering[(*enteringSize)++] = l;
+            isExitOrEnter[i] = true;
+        }
+    }
+
+    for (int i = 0; i < ogHovBuffSize; i++)
+    {
+        Layout* l = ogHovBuff[i];
+        if (!isExitOrEnter[i])
+        {
+            stillHovering[(*stillHoveringSize)++] = l;
         }
     }
 }
