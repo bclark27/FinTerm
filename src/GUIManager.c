@@ -33,7 +33,7 @@ void compareHovBuffs(
 void doBubble(Layout * target, BblEvt * e);
 void buildTabOrder(Layout *root, Layout **out_list, int *out_count);
 int treeSize(Layout* node, bool includeInvisible);
-Layout* getNextTabNav_inefficient(bool forward);
+Layout* getNextTabNav(bool forward);
 
 // layout vtable
 
@@ -176,13 +176,14 @@ void rootEvtCapture(Layout* l, BblEvt* e)
 
         if (doTabNav)
         {
-            Logger_Log("Tabbing\n");
+            
 
             e->handled = true;
             bool shiftForward = ke->raw == 0x9;
 
             // do the tab nav
-            Layout* nextTab = getNextTabNav_inefficient(shiftForward);
+            Layout* nextTab = getNextTabNav(shiftForward);
+            Logger_Log("Tabbing: %p\n", nextTab);
             focusLayout(nextTab);
 
             return;
@@ -453,17 +454,6 @@ void doBubble(Layout * target, BblEvt * e)
     }
 }
 
-void buildTabOrder(Layout *root, Layout **out_list, int *out_count) 
-{
-    if (!root || !root->visible) return;
-    
-    out_list[(*out_count)++] = root;
-    
-    for (int i = 0; i < root->childrenCount; ++i) {
-        buildTabOrder(root->children[i], out_list, out_count);
-    }
-}
-
 int treeSize(Layout* node, bool includeInvisible)
 {
     if (!node || (!node->visible && !includeInvisible)) return 0;
@@ -478,41 +468,80 @@ int treeSize(Layout* node, bool includeInvisible)
     return count;
 }
 
-Layout* getNextTabNav_inefficient(bool forward)
+Layout* find_prev_focusable_internal(Layout *node, Layout *current, bool *foundCurrent) 
+{
+    if (!node || !node->visible) return NULL;
+
+    // 1) Dive into children in reverse order
+    for (int i = node->childrenCount - 1; i >= 0; --i) 
+    {
+        Layout *res = find_prev_focusable_internal(
+        node->children[i], current, foundCurrent);
+        if (res) return res;
+    }
+    // 2) When you see current, mark it
+    if (node == current) 
+    {
+        *foundCurrent = true;
+    }
+    // 3) If you’ve seen current already, this is the previous candidate
+    else if (*foundCurrent) 
+    {
+        return node;
+    }
+        return NULL;
+}
+
+Layout* find_prev_focusable(Layout *root, Layout *current) 
+{
+    bool found = false;
+    Layout *prev = find_prev_focusable_internal(root, current, &found);
+    if (prev) return prev;
+
+    // wrap: scan from the end
+    bool dummy = false;
+    return find_prev_focusable_internal(root, NULL, &dummy);
+}
+
+Layout* find_next_focusable_internal(Layout *node, Layout *current, bool *foundCurrent) 
+{
+    if (!node || !node->visible) return NULL;
+
+    // 1) If this is the current, mark that we’ve seen it.
+    if (node == current) {
+        *foundCurrent = true;
+    }
+    // 2) If we already saw current, then this is the next candidate.
+    else if (*foundCurrent) 
+    {
+        return node;
+    }
+
+    // 3) Recurse into children in natural order
+    for (int i = 0; i < node->childrenCount; ++i) 
+    {
+        Layout *res = find_next_focusable_internal(
+        node->children[i], current, foundCurrent);
+        if (res) return res;
+    }
+    return NULL;
+}
+
+Layout* find_next_focusable(Layout *root, Layout *current) {
+    bool found = false;
+    Layout *next = find_next_focusable_internal(root, current, &found);
+    if (next) return next;
+
+    // wrap: start again from the very first node
+    bool dummy = false;
+    return find_next_focusable_internal(root, NULL, &dummy);
+}
+
+Layout* getNextTabNav(bool forward)
 {
     if (!manager.focused) return manager.root;
 
-    Layout** tabOrder = malloc(sizeof(Layout*) * treeSize(manager.root, false));
-
-    int count = 0;
-    buildTabOrder(manager.root, tabOrder, &count);
-    
-    int currFocusIdx = 0;
-    for (int i = 0; i < count; i++)
-    {
-        if (tabOrder[i] == manager.focused)
-        {
-            currFocusIdx = i;
-            break;
-        }
-    }
-
-    Layout* nextTab = NULL;
-
-    if (forward)
-    {
-        currFocusIdx++;
-        if (currFocusIdx >= count) currFocusIdx = 0;
-        nextTab = tabOrder[currFocusIdx];
-    }
-    else
-    {
-        currFocusIdx--;
-        if (currFocusIdx < 0) currFocusIdx = count - 1;
-        nextTab = tabOrder[currFocusIdx];
-    }
-
-    free(tabOrder);
-
-    return nextTab;
+    return forward ? 
+        find_next_focusable(manager.root, manager.focused) :
+        find_prev_focusable(manager.root, manager.focused);
 }
