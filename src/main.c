@@ -11,6 +11,7 @@
 #include "Common.h"
 #include "InputManager.h"
 #include "Layout/Label.h"
+#include "Layout/Entry.h"
 #include "GUIManager.h"
 
 #define REF_TIME  (50)
@@ -24,7 +25,8 @@ void handle_sigint(int sig) {
 
 void buildTestGUI(Layout* root)
 {
-  for (int i = 0; i < 3; i++)
+  
+  for (int i = 0; i < 2; i++)
   {
     Label * l = Label_Create();
     Label_SetTextCpy(l, "hello there\nA\nB\nfriend");
@@ -33,6 +35,20 @@ void buildTestGUI(Layout* root)
     l->vertAlign = Alignment_Start + i;
     Layout_AddChild(root, (Layout*)l);
   }
+
+  Layout_AddChild(root, (Layout*)Entry_Create());
+
+  for (int i = 0; i < 2; i++)
+  {
+    Label * l = Label_Create();
+    Label_SetTextCpy(l, "hello there\nA\nB\nfriend");
+    l->textOption = LabelTextOptions_Center;
+    l->horzAlign = Alignment_Start + i;
+    l->vertAlign = Alignment_Start + i;
+    Layout_AddChild(root, (Layout*)l);
+  }
+
+  root->orientation = LayoutOrientation_V;
 }
 
 
@@ -54,6 +70,7 @@ int main()
 
   Layout * root = GUIManager_GetRoot();
   buildTestGUI(root);
+  GUIManager_LayoutRefresh(true);
 
   while (1)
   {
@@ -65,7 +82,7 @@ int main()
       long s,e;
       s = current_time();
       
-      GUIManager_SizeRefresh();
+      GUIManager_LayoutRefresh(false);
       InputManager_Update();
       InputManager_GetKeyEvents(events, &events_count);
       GUIManager_OnKeys(events, events_count);

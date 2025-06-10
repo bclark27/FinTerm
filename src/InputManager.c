@@ -131,6 +131,7 @@ bool parseCh(int ch, InputEvent* info)
         // Special keys (arrows, function keys, etc.)
         switch (ch) {
             case KEY_UP:
+            case 27: // escape
             case KEY_DOWN:
             case KEY_LEFT:
             case KEY_RIGHT:

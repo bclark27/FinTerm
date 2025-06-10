@@ -14,7 +14,7 @@ void GUIManager_QueueEvent(BblEvt evt);
 void GUIManager_HandleEventQueue();
 
 
-void GUIManager_SizeRefresh();
+void GUIManager_LayoutRefresh(bool force);
 void GUIManager_Draw(bool force);
 
 #endif

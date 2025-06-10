@@ -35,7 +35,6 @@ void compareHovBuffs(
     Layout* entering[], int* enteringSize,
     Layout* stillHovering[], int* stillHoveringSize);
 void doBubble(BblEvt * e);
-void buildTabOrder(Layout *root, Layout **out_list, int *out_count);
 int treeSize(Layout* node, bool includeInvisible);
 Layout* getNextTabNav(bool forward);
 void freezeEventQueue(BblEvt* buffer, int* size);
@@ -78,11 +77,11 @@ void GUIManager_Init()
     manager.root->vtable = vtable;
     manager.currEventQueueIdx = 0;
     manager.eventQueueSize = 0;
-    GUIManager_SizeRefresh();
+    GUIManager_LayoutRefresh(true);
 
     for (int i = 0; i < 2; i++)
     {
-        GUIManager_SizeRefresh();
+        GUIManager_LayoutRefresh(true);
         GUIManager_Draw(true);
         refresh();
     }
@@ -166,14 +165,14 @@ void GUIManager_HandleEventQueue()
     }
 }
 
-void GUIManager_SizeRefresh()
+void GUIManager_LayoutRefresh(bool force)
 {
     if (!manager.init) return;
 
     int r,c;
     getCurrTermSize(&r, &c);
 
-    if (manager.root->width != c || manager.root->height != r)
+    if (manager.root->width != c || manager.root->height != r || force)
     {
         manager.root->width = c;
         manager.root->height = r;
@@ -490,7 +489,7 @@ int treeSize(Layout* node, bool includeInvisible)
 
 Layout* find_prev_focusable_internal(Layout *node, Layout *current, bool *foundCurrent) 
 {
-    if (!node || !node->visible) return NULL;
+    if (!node || !node->visible || node->tabNavSkip) return NULL;
 
     // 1) Dive into children in reverse order
     for (int i = node->childrenCount - 1; i >= 0; --i) 
@@ -525,7 +524,7 @@ Layout* find_prev_focusable(Layout *root, Layout *current)
 
 Layout* find_next_focusable_internal(Layout *node, Layout *current, bool *foundCurrent) 
 {
-    if (!node || !node->visible) return NULL;
+    if (!node || !node->visible || node->tabNavSkip) return NULL;
 
     // 1) If this is the current, mark that we’ve seen it.
     if (node == current) {

@@ -27,13 +27,15 @@ static Layout_VT vtable =
     .onPtrMove = label_onPtrMove,
     .onFocus = label_onFocus,
     .onUnFocus = label_onUnFocus,
+    .onBblEvt = NULL,
+    .onBblEvtCapture = NULL,
 };
 
 // public
 
 Label * Label_Create()
 {
-    Label * label = calloc(sizeof(Label), 1);
+    Label * label = calloc(1, sizeof(Label));
     Layout_Init((Layout*)label);
     ((Layout*)label)->vtable = vtable;
     return label;
