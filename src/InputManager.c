@@ -141,12 +141,14 @@ bool parseCh(int ch, InputEvent* info)
             case KEY_NPAGE:
             case KEY_PPAGE:
             case KEY_ENTER:
+            case KEY_BTAB:
                 // Handle special keys
                 info->isSpecial = true;
                 return true;
                 break;
             default:
                 // Possibly unknown
+                Logger_Log("Unknown Key: %d\n", ch);
                 return false;
                 break;
         }

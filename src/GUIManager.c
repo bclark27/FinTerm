@@ -18,6 +18,7 @@ typedef struct GUIManager
 static GUIManager manager;
 
 // declerations
+void rootEvtCapture(Layout* l, BblEvt* e);
 void dispatchMouseEvt(InputEvent* evt, Layout* target);
 void focusLayout(Layout* l);
 void handleMouseEvent(InputEvent* evt);
@@ -29,6 +30,21 @@ void compareHovBuffs(
     Layout* entering[], int* enteringSize,
     Layout* stillHovering[], int* stillHoveringSize);
 void doBubble(Layout * target, BblEvt * e);
+
+// layout vtable
+
+static Layout_VT vtable = 
+{
+    .draw = NULL,
+    .onDestroy = NULL,
+    .onPtrEnter = NULL,
+    .onPtrExit = NULL,
+    .onPtrMove = NULL,
+    .onFocus = NULL,
+    .onUnFocus = NULL,
+    .onBblEvt = NULL,
+    .onBblEvtCapture = rootEvtCapture,
+};
 
 // PUBLIC
 
@@ -50,6 +66,7 @@ void GUIManager_Init()
     manager.hovBuffCurrSize = 0;
     manager.init = true;
     manager.root = Layout_Create();
+    manager.root->vtable = vtable;
     GUIManager_SizeRefresh();
 
     for (int i = 0; i < 2; i++)
@@ -90,24 +107,24 @@ void GUIManager_OnKeys(InputEvent* evts, int count)
         }
         else
         {
-            if (manager.focused)
-            {
-                BblEvt be;
-                BblEvt_Key kbe;
+            Layout* target = manager.root;
+            if (manager.focused) target = manager.focused;
 
-                kbe.raw = evts[i].raw;
-                kbe.isAscii = evts[i].isAscii;
-                kbe.isCtrl = evts[i].isCtrl;
-                kbe.isSpecial = evts[i].isSpecial;
-                kbe.keyCode = evts[i].keyCode;
+            BblEvt be;
+            BblEvt_Key kbe;
 
-                be.evtData = &kbe;
-                be.handled = false;
-                be.target = manager.focused;
-                be.type = BblEvtType_Key;
+            kbe.raw = evts[i].raw;
+            kbe.isAscii = evts[i].isAscii;
+            kbe.isCtrl = evts[i].isCtrl;
+            kbe.isSpecial = evts[i].isSpecial;
+            kbe.keyCode = evts[i].keyCode;
 
-                doBubble(manager.focused, &be);
-            }
+            be.evtData = &kbe;
+            be.handled = false;
+            be.target = target;
+            be.type = BblEvtType_Key;
+
+            doBubble(target, &be);
         }
     }
 }
@@ -134,6 +151,29 @@ void GUIManager_Draw(bool force)
 }
 
 // PRIV
+
+void rootEvtCapture(Layout* l, BblEvt* e)
+{
+    if (!l || !e) return;
+
+    if (e->type == BblEvtType_Key)
+    {
+        BblEvt_Key* ke = (BblEvt_Key*)e->evtData;
+
+        if (e->target && 
+            !e->target->acceptsLiteralTab &&
+            (ke->raw == 0x9 || ke->raw == KEY_BTAB))
+        {
+            e->handled = true;
+
+            bool shiftForward = ke->raw == 0x9;
+
+            // do a shift tab
+            Logger_Log("Tab Nav\n");
+            return;
+        }
+    }
+}
 
 void handleMouseEvent(InputEvent* evt)
 {
