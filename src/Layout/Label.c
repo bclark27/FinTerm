@@ -69,7 +69,7 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     if (!l) return;
 
     Label * label = (Label*)l;
-    if (l->isHover)
+    if (l->isFocus)
     {
         box(win, 0, 0);
     }
@@ -184,12 +184,12 @@ void label_onPtrMove(Layout* l, InputEvent* e)
 
 void label_onFocus(Layout* l)
 {
-    
+    l->isDirty = true;
 }
 
 void label_onUnFocus(Layout* l)
 {
-    
+    l->isDirty = true;
 }
 
 void label_disposeStr(Label * label)

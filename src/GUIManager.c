@@ -1,4 +1,5 @@
 #include "GUIManager.h"
+#include "Common.h"
 #include "Logger.h"
 #include <ncursesw/ncurses.h>
 #include <locale.h>
@@ -30,6 +31,9 @@ void compareHovBuffs(
     Layout* entering[], int* enteringSize,
     Layout* stillHovering[], int* stillHoveringSize);
 void doBubble(Layout * target, BblEvt * e);
+void buildTabOrder(Layout *root, Layout **out_list, int *out_count);
+int treeSize(Layout* node, bool includeInvisible);
+Layout* getNextTabNav_inefficient(bool forward);
 
 // layout vtable
 
@@ -160,16 +164,27 @@ void rootEvtCapture(Layout* l, BblEvt* e)
     {
         BblEvt_Key* ke = (BblEvt_Key*)e->evtData;
 
-        if (e->target && 
-            !e->target->acceptsLiteralTab &&
-            (ke->raw == 0x9 || ke->raw == KEY_BTAB))
-        {
-            e->handled = true;
 
+        bool doTabNav = ke->raw == 0x9 || ke->raw == KEY_BTAB;
+
+        if (e->target && 
+            e->target->acceptsLiteralTab &&
+            ke->raw == 0x9)
+        {
+            doTabNav = false;
+        }
+
+        if (doTabNav)
+        {
+            Logger_Log("Tabbing\n");
+
+            e->handled = true;
             bool shiftForward = ke->raw == 0x9;
 
-            // do a shift tab
-            Logger_Log("Tab Nav\n");
+            // do the tab nav
+            Layout* nextTab = getNextTabNav_inefficient(shiftForward);
+            focusLayout(nextTab);
+
             return;
         }
     }
@@ -299,6 +314,19 @@ void focusLayout(Layout* l)
         {
             manager.focused->isFocus = false;
             if (manager.focused->vtable.onUnFocus) manager.focused->vtable.onUnFocus(manager.focused);
+            
+            BblEvt be;
+            BblEvt_Focus fbe;
+
+            fbe.focus = false;
+            fbe.target = manager.focused;
+
+            be.evtData = &fbe;
+            be.handled = false;
+            be.target = manager.focused;
+            be.type = BblEvtType_Focus;
+
+            doBubble(manager.focused, &be);
         }
 
         manager.focused = l;
@@ -307,6 +335,19 @@ void focusLayout(Layout* l)
         {
             manager.focused->isFocus = true;
             if (manager.focused->vtable.onUnFocus) manager.focused->vtable.onUnFocus(manager.focused);
+
+            BblEvt be;
+            BblEvt_Focus fbe;
+
+            fbe.focus = true;
+            fbe.target = manager.focused;
+
+            be.evtData = &fbe;
+            be.handled = false;
+            be.target = manager.focused;
+            be.type = BblEvtType_Focus;
+
+            doBubble(manager.focused, &be);
         }
         
     }
@@ -410,4 +451,68 @@ void doBubble(Layout * target, BblEvt * e)
             if (e->handled) return;
         }
     }
+}
+
+void buildTabOrder(Layout *root, Layout **out_list, int *out_count) 
+{
+    if (!root || !root->visible) return;
+    
+    out_list[(*out_count)++] = root;
+    
+    for (int i = 0; i < root->childrenCount; ++i) {
+        buildTabOrder(root->children[i], out_list, out_count);
+    }
+}
+
+int treeSize(Layout* node, bool includeInvisible)
+{
+    if (!node || (!node->visible && !includeInvisible)) return 0;
+
+    int count = 1;
+
+    for (int i = 0; i < node->childrenCount; i++)
+    {
+        count += treeSize(node->children[i], includeInvisible);
+    }
+
+    return count;
+}
+
+Layout* getNextTabNav_inefficient(bool forward)
+{
+    if (!manager.focused) return manager.root;
+
+    Layout** tabOrder = malloc(sizeof(Layout*) * treeSize(manager.root, false));
+
+    int count = 0;
+    buildTabOrder(manager.root, tabOrder, &count);
+    
+    int currFocusIdx = 0;
+    for (int i = 0; i < count; i++)
+    {
+        if (tabOrder[i] == manager.focused)
+        {
+            currFocusIdx = i;
+            break;
+        }
+    }
+
+    Layout* nextTab = NULL;
+
+    if (forward)
+    {
+        currFocusIdx++;
+        if (currFocusIdx >= count) currFocusIdx = 0;
+        nextTab = tabOrder[currFocusIdx];
+    }
+    else
+    {
+        currFocusIdx--;
+        if (currFocusIdx < 0) currFocusIdx = count - 1;
+        nextTab = tabOrder[currFocusIdx];
+    }
+
+    free(tabOrder);
+
+    return nextTab;
 }

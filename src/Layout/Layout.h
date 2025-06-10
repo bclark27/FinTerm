@@ -35,7 +35,8 @@ typedef enum BblEvtType
 {
     BblEvtType_Click,
     BblEvtType_Scroll,
-    BblEvtType_Key
+    BblEvtType_Key,
+    BblEvtType_Focus
 } BblEvtType;
 
 typedef struct BblEvt
@@ -74,6 +75,11 @@ typedef struct BblEvt_Scroll
     bool down;
 } BblEvt_Scroll;
 
+typedef struct BblEvt_Focus
+{
+    struct Layout* target;
+    bool focus;
+} BblEvt_Focus;
 
 
 // draw!!!
@@ -114,7 +120,7 @@ typedef struct Layout
 
     WINDOW * win;
 
-    // this list should be mantained such that all in use children are compressed to the front of tthe list
+    // this list should be mantained such that all in use children are compressed to the front of the list
     struct Layout * children[LAYOUT_MAX_DIV];
     struct Layout * parent;
     LayoutOrientation orientation;
