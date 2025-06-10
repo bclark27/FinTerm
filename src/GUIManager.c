@@ -5,7 +5,8 @@
 #include <locale.h>
 #include <string.h>
 
-#define MAX_DEPTH   (1000)
+#define MAX_DEPTH   (2000)
+#define MAX_EVT_Q   (2000)
 
 typedef struct GUIManager
 {
@@ -13,6 +14,9 @@ typedef struct GUIManager
     Layout* focused;
     int hovBuffCurrSize;
     Layout* hovBuffer[MAX_DEPTH];
+    int eventQueueSize;
+    int currEventQueueIdx;
+    BblEvt eventQueue[MAX_EVT_Q];
     bool init;
 } GUIManager;
 
@@ -30,10 +34,11 @@ void compareHovBuffs(
     Layout* exiting[], int* exitingSize, 
     Layout* entering[], int* enteringSize,
     Layout* stillHovering[], int* stillHoveringSize);
-void doBubble(Layout * target, BblEvt * e);
+void doBubble(BblEvt * e);
 void buildTabOrder(Layout *root, Layout **out_list, int *out_count);
 int treeSize(Layout* node, bool includeInvisible);
 Layout* getNextTabNav(bool forward);
+void freezeEventQueue(BblEvt* buffer, int* size);
 
 // layout vtable
 
@@ -71,6 +76,8 @@ void GUIManager_Init()
     manager.init = true;
     manager.root = Layout_Create();
     manager.root->vtable = vtable;
+    manager.currEventQueueIdx = 0;
+    manager.eventQueueSize = 0;
     GUIManager_SizeRefresh();
 
     for (int i = 0; i < 2; i++)
@@ -115,20 +122,46 @@ void GUIManager_OnKeys(InputEvent* evts, int count)
             if (manager.focused) target = manager.focused;
 
             BblEvt be;
-            BblEvt_Key kbe;
 
-            kbe.raw = evts[i].raw;
-            kbe.isAscii = evts[i].isAscii;
-            kbe.isCtrl = evts[i].isCtrl;
-            kbe.isSpecial = evts[i].isSpecial;
-            kbe.keyCode = evts[i].keyCode;
+            be.data.key.raw = evts[i].raw;
+            be.data.key.isAscii = evts[i].isAscii;
+            be.data.key.isCtrl = evts[i].isCtrl;
+            be.data.key.isSpecial = evts[i].isSpecial;
+            be.data.key.keyCode = evts[i].keyCode;
 
-            be.evtData = &kbe;
             be.handled = false;
             be.target = target;
             be.type = BblEvtType_Key;
 
-            doBubble(target, &be);
+            GUIManager_QueueEvent(be);
+        }
+    }
+}
+
+void GUIManager_QueueEvent(BblEvt evt)
+{
+    int nextIdx = manager.currEventQueueIdx + 1;
+    if (nextIdx >= MAX_EVT_Q) nextIdx = 0;
+
+    manager.eventQueue[nextIdx] = evt;
+    manager.currEventQueueIdx = nextIdx;
+
+    manager.eventQueueSize = MIN(manager.eventQueueSize + 1, INPUT_EVENT_BUFFER_SIZE);
+}
+
+void GUIManager_HandleEventQueue()
+{
+    BblEvt frozenEvts[MAX_EVT_Q];
+    int frozenSize;
+
+    while (manager.eventQueueSize)
+    {
+        freezeEventQueue(frozenEvts, &frozenSize);
+        manager.eventQueueSize = 0;
+        manager.currEventQueueIdx = 0;
+        for (int i = 0; i < frozenSize; i++)
+        {
+            doBubble(&(frozenEvts[i]));
         }
     }
 }
@@ -162,7 +195,7 @@ void rootEvtCapture(Layout* l, BblEvt* e)
 
     if (e->type == BblEvtType_Key)
     {
-        BblEvt_Key* ke = (BblEvt_Key*)e->evtData;
+        BblEvt_Key* ke = (BblEvt_Key*)&(e->data.key);
 
 
         bool doTabNav = ke->raw == 0x9 || ke->raw == KEY_BTAB;
@@ -176,14 +209,9 @@ void rootEvtCapture(Layout* l, BblEvt* e)
 
         if (doTabNav)
         {
-            
-
             e->handled = true;
             bool shiftForward = ke->raw == 0x9;
-
-            // do the tab nav
             Layout* nextTab = getNextTabNav(shiftForward);
-            Logger_Log("Tabbing: %p\n", nextTab);
             focusLayout(nextTab);
 
             return;
@@ -269,41 +297,37 @@ void dispatchMouseEvt(InputEvent* evt, Layout* target)
         evt->midClick)
     {
         BblEvt be;
-        BblEvt_Click cbe;
 
-        cbe.target = target;
-        cbe.x = evt->mevent.x;
-        cbe.y = evt->mevent.y;
-        cbe.leftClick = evt->leftClick;
-        cbe.rightClick = evt->rightClick;
-        cbe.midClick = evt->midClick;
+        be.data.click.target = target;
+        be.data.click.x = evt->mevent.x;
+        be.data.click.y = evt->mevent.y;
+        be.data.click.leftClick = evt->leftClick;
+        be.data.click.rightClick = evt->rightClick;
+        be.data.click.midClick = evt->midClick;
 
-        be.evtData = &cbe;
         be.handled = false;
         be.target = target;
         be.type = BblEvtType_Click;
 
-        doBubble(target, &be);
+        GUIManager_QueueEvent(be);
     }
 
     if (evt->scrollDown ||
         evt->scrollUp)
     {
         BblEvt be;
-        BblEvt_Scroll sbe;
 
-        sbe.target = target;
-        sbe.x = evt->mevent.x;
-        sbe.y = evt->mevent.y;
-        sbe.up = evt->scrollUp;
-        sbe.down = evt->scrollDown;
+        be.data.scroll.target = target;
+        be.data.scroll.x = evt->mevent.x;
+        be.data.scroll.y = evt->mevent.y;
+        be.data.scroll.up = evt->scrollUp;
+        be.data.scroll.down = evt->scrollDown;
 
-        be.evtData = &sbe;
         be.handled = false;
         be.target = target;
         be.type = BblEvtType_Scroll;
 
-        doBubble(target, &be);
+        GUIManager_QueueEvent(be);
     }
 }
 
@@ -317,17 +341,15 @@ void focusLayout(Layout* l)
             if (manager.focused->vtable.onUnFocus) manager.focused->vtable.onUnFocus(manager.focused);
             
             BblEvt be;
-            BblEvt_Focus fbe;
 
-            fbe.focus = false;
-            fbe.target = manager.focused;
+            be.data.focus.focus = false;
+            be.data.focus.target = manager.focused;
 
-            be.evtData = &fbe;
             be.handled = false;
             be.target = manager.focused;
             be.type = BblEvtType_Focus;
 
-            doBubble(manager.focused, &be);
+            GUIManager_QueueEvent(be);
         }
 
         manager.focused = l;
@@ -338,17 +360,15 @@ void focusLayout(Layout* l)
             if (manager.focused->vtable.onUnFocus) manager.focused->vtable.onUnFocus(manager.focused);
 
             BblEvt be;
-            BblEvt_Focus fbe;
 
-            fbe.focus = true;
-            fbe.target = manager.focused;
+            be.data.focus.focus = true;
+            be.data.focus.target = manager.focused;
 
-            be.evtData = &fbe;
             be.handled = false;
             be.target = manager.focused;
             be.type = BblEvtType_Focus;
 
-            doBubble(manager.focused, &be);
+            GUIManager_QueueEvent(be);
         }
         
     }
@@ -425,13 +445,13 @@ void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize,
 }
 
 
-void doBubble(Layout * target, BblEvt * e)
+void doBubble(BblEvt * e)
 {
-    if (!target || !e) return;
+    if (!e || !e->target) return;
 
     Layout *stack[MAX_DEPTH];
     int depth = 0;
-    for (Layout *p = target; p; p = p->parent) stack[depth++] = p;
+    for (Layout *p = e->target; p; p = p->parent) stack[depth++] = p;
 
     // capture phase
     for (int i = depth - 1; i >= 0; --i) 
@@ -544,4 +564,16 @@ Layout* getNextTabNav(bool forward)
     return forward ? 
         find_next_focusable(manager.root, manager.focused) :
         find_prev_focusable(manager.root, manager.focused);
+}
+
+void freezeEventQueue(BblEvt* buffer, int* size)
+{
+    int qidx = manager.currEventQueueIdx;
+    for (int i = 0; i < manager.eventQueueSize; i++)
+    {
+        buffer[i] = manager.eventQueue[qidx];
+        qidx--;
+        if (qidx < 0) qidx = MAX_EVT_Q - 1;
+    }
+    *size = manager.eventQueueSize;
 }

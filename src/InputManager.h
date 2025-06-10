@@ -5,7 +5,7 @@
 #include <ncursesw/ncurses.h>
 
 // defines
-#define INPUT_EVENT_BUFFER_SIZE   (10000)
+#define INPUT_EVENT_BUFFER_SIZE   (1000)
 
 typedef struct InputEvent
 {

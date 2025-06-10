@@ -69,6 +69,7 @@ int main()
       InputManager_Update();
       InputManager_GetKeyEvents(events, &events_count);
       GUIManager_OnKeys(events, events_count);
+      GUIManager_HandleEventQueue();
       GUIManager_Draw(false);
       
       e = current_time();

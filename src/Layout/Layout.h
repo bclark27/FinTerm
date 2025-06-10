@@ -39,14 +39,6 @@ typedef enum BblEvtType
     BblEvtType_Focus
 } BblEvtType;
 
-typedef struct BblEvt
-{
-    struct Layout* target;
-    BblEvtType type;
-    bool handled;
-    void* evtData;
-} BblEvt;
-
 typedef struct BblEvt_Click
 {
     struct Layout* target;
@@ -81,6 +73,19 @@ typedef struct BblEvt_Focus
     bool focus;
 } BblEvt_Focus;
 
+typedef struct BblEvt
+{
+    struct Layout* target;
+    BblEvtType type;
+    bool handled;
+    union
+    {
+        struct BblEvt_Click click;
+        struct BblEvt_Key key;
+        struct BblEvt_Scroll scroll;
+        struct BblEvt_Focus focus;
+    } data;
+} BblEvt;
 
 // draw!!!
 typedef void (*LayoutDrawCallback)(struct Layout* l, WINDOW *win, int x, int y, int width, int height);
@@ -123,22 +128,23 @@ typedef struct Layout
     // this list should be mantained such that all in use children are compressed to the front of the list
     struct Layout * children[LAYOUT_MAX_DIV];
     struct Layout * parent;
-    LayoutOrientation orientation;
-
-    bool acceptsLiteralTab;
-
+    
     double sizeRatio;
+    
+    LayoutOrientation orientation;
     int absSize;
     int width;
     int height;
     int abs_x;
     int abs_y;
     int childrenCount;
-
+    int padding;
+    
     bool isDirty;
     bool isHover;
     bool isFocus;
     bool visible;
+    bool acceptsLiteralTab;
 } Layout;
 
 
