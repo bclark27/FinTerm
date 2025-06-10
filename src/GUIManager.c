@@ -18,6 +18,9 @@ typedef struct GUIManager
 static GUIManager manager;
 
 // declerations
+void dispatchMouseEvt(InputEvent* evt, Layout* target);
+void focusLayout(Layout* l);
+void handleMouseEvent(InputEvent* evt);
 void getCurrTermSize(int* rows, int* cols);
 void compareHovBuffs(
     Layout* ogHovBuff[], int ogHovBuffSize, 
@@ -25,6 +28,7 @@ void compareHovBuffs(
     Layout* exiting[], int* exitingSize, 
     Layout* entering[], int* enteringSize,
     Layout* stillHovering[], int* stillHoveringSize);
+void doBubble(Layout * target, BblEvt * e);
 
 // PUBLIC
 
@@ -80,78 +84,30 @@ void GUIManager_OnKeys(InputEvent* evts, int count)
 {
     for (int i = 0; i < count; i++)
     {
-        // first if it is a mouse event then redo all the hover states
-        // also redo the focus guy
         if (evts[i].isMouse)
         {
-            Layout* newHovBuff[MAX_DEPTH];
-            int newHovBuffLen = 0;
-            Layout_GetChildNodeAtPoint(manager.root, evts[i].mevent.x, evts[i].mevent.y, newHovBuff, MAX_DEPTH, &newHovBuffLen);
-            
-            Layout* entering[MAX_DEPTH];
-            Layout* exiting[MAX_DEPTH];
-            Layout* stillHovering[MAX_DEPTH];
-            int enteringSize = 0;
-            int exitingSize = 0;
-            int stillHoveringSize = 0;
-            compareHovBuffs(
-                manager.hovBuffer, manager.hovBuffCurrSize,
-                newHovBuff, newHovBuffLen,
-                exiting, &exitingSize,
-                entering, &enteringSize,
-                stillHovering, &stillHoveringSize
-            );
-            
-            memmove(manager.hovBuffer, newHovBuff, newHovBuffLen * sizeof(Layout*));
-            manager.hovBuffCurrSize = newHovBuffLen;
-
-            Layout* newFocus = NULL;
-            int lastIdx = manager.hovBuffCurrSize - 1;
-            if (lastIdx >= 0)
+            handleMouseEvent(&evts[i]);
+        }
+        else
+        {
+            if (manager.focused)
             {
-                newFocus = manager.hovBuffer[lastIdx];
+                BblEvt be;
+                BblEvt_Key kbe;
+
+                kbe.raw = evts[i].raw;
+                kbe.isAscii = evts[i].isAscii;
+                kbe.isCtrl = evts[i].isCtrl;
+                kbe.isSpecial = evts[i].isSpecial;
+                kbe.keyCode = evts[i].keyCode;
+
+                be.evtData = &kbe;
+                be.handled = false;
+                be.target = manager.focused;
+                be.type = BblEvtType_Key;
+
+                doBubble(manager.focused, &be);
             }
-
-            bool isFocusEvent = evts[i].leftClick;
-
-            // first do the unfocus and all exiting hovers
-            if (newFocus != manager.focused && 
-                manager.focused && 
-                isFocusEvent)
-            {
-                Layout_Focus(manager.focused, &evts[i], false);
-            }
-
-            for (int k = 0; k < exitingSize; k++)
-            {
-                Layout_Hover(exiting[k], &evts[i], false);
-            }
-
-            // next do all the still hovering guys
-            for (int k = 0; k < stillHoveringSize; k++)
-            {
-                Layout_Hover(stillHovering[k], &evts[i], true);
-            }
-
-            for (int k = 0; k < enteringSize; k++)
-            {
-                Layout_Hover(entering[k], &evts[i], true);
-            }
-            
-            if (newFocus != manager.focused && 
-                newFocus && 
-                isFocusEvent)
-            {
-                Layout_Focus(newFocus, &evts[i], true);
-            }
-
-            if (isFocusEvent)
-            {
-                manager.focused = newFocus;
-            } 
-                
-
-            continue;
         }
     }
 }
@@ -178,6 +134,143 @@ void GUIManager_Draw(bool force)
 }
 
 // PRIV
+
+void handleMouseEvent(InputEvent* evt)
+{
+    if (!evt->isMouse) return;
+
+    Layout* newHovBuff[MAX_DEPTH];
+    int newHovBuffLen = 0;
+    Layout_HitTest(manager.root, evt->mevent.x, evt->mevent.y, newHovBuff, MAX_DEPTH, &newHovBuffLen);
+    
+    Layout* entering[MAX_DEPTH];
+    Layout* exiting[MAX_DEPTH];
+    Layout* stillHovering[MAX_DEPTH];
+    int enteringSize = 0;
+    int exitingSize = 0;
+    int stillHoveringSize = 0;
+    compareHovBuffs(
+        manager.hovBuffer, manager.hovBuffCurrSize,
+        newHovBuff, newHovBuffLen,
+        exiting, &exitingSize,
+        entering, &enteringSize,
+        stillHovering, &stillHoveringSize
+    );
+    
+    memmove(manager.hovBuffer, newHovBuff, newHovBuffLen * sizeof(Layout*));
+    manager.hovBuffCurrSize = newHovBuffLen;
+
+    bool isFocusEvent = evt->leftClick;
+    Layout* target = NULL;
+    int lastIdx = manager.hovBuffCurrSize - 1;
+    if (lastIdx >= 0)
+    {
+        target = manager.hovBuffer[lastIdx];
+    }
+
+    if (isFocusEvent)
+    {
+        focusLayout(target);
+    }
+
+    for (int k = 0; k < exitingSize; k++)
+    {
+        if (exiting[k]->vtable.onPtrExit)
+        {
+            exiting[k]->isHover = false;
+            exiting[k]->vtable.onPtrExit(exiting[k], evt);
+        }
+    }
+
+    // next do all the still hovering guys
+    for (int k = 0; k < stillHoveringSize; k++)
+    {
+        if (stillHovering[k]->vtable.onPtrMove)
+        {
+            stillHovering[k]->isHover = true;
+            stillHovering[k]->vtable.onPtrMove(stillHovering[k], evt);
+        }
+    }
+
+    for (int k = 0; k < enteringSize; k++)
+    {
+        if (entering[k]->vtable.onPtrEnter)
+        {
+            entering[k]->isHover = true;
+            entering[k]->vtable.onPtrEnter(entering[k], evt);
+        }
+    }
+    
+    dispatchMouseEvt(evt, target);
+}
+
+void dispatchMouseEvt(InputEvent* evt, Layout* target)
+{
+    if (!evt || !evt->isMouse || !target) return;
+    
+    if (evt->rightClick ||
+        evt->leftClick ||
+        evt->midClick)
+    {
+        BblEvt be;
+        BblEvt_Click cbe;
+
+        cbe.target = target;
+        cbe.x = evt->mevent.x;
+        cbe.y = evt->mevent.y;
+        cbe.leftClick = evt->leftClick;
+        cbe.rightClick = evt->rightClick;
+        cbe.midClick = evt->midClick;
+
+        be.evtData = &cbe;
+        be.handled = false;
+        be.target = target;
+        be.type = BblEvtType_Click;
+
+        doBubble(target, &be);
+    }
+
+    if (evt->scrollDown ||
+        evt->scrollUp)
+    {
+        BblEvt be;
+        BblEvt_Scroll sbe;
+
+        sbe.target = target;
+        sbe.x = evt->mevent.x;
+        sbe.y = evt->mevent.y;
+        sbe.up = evt->scrollUp;
+        sbe.down = evt->scrollDown;
+
+        be.evtData = &sbe;
+        be.handled = false;
+        be.target = target;
+        be.type = BblEvtType_Scroll;
+
+        doBubble(target, &be);
+    }
+}
+
+void focusLayout(Layout* l)
+{
+    if (l != manager.focused)
+    {
+        if (manager.focused)
+        {
+            manager.focused->isFocus = false;
+            if (manager.focused->vtable.onUnFocus) manager.focused->vtable.onUnFocus(manager.focused);
+        }
+
+        manager.focused = l;
+
+        if (manager.focused)
+        {
+            manager.focused->isFocus = true;
+            if (manager.focused->vtable.onUnFocus) manager.focused->vtable.onUnFocus(manager.focused);
+        }
+        
+    }
+}
 
 void getCurrTermSize(int* rows, int* cols)
 {
@@ -245,6 +338,36 @@ void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize,
         if (!isExitOrEnter[i])
         {
             stillHovering[(*stillHoveringSize)++] = l;
+        }
+    }
+}
+
+
+void doBubble(Layout * target, BblEvt * e)
+{
+    if (!target || !e) return;
+
+    Layout *stack[MAX_DEPTH];
+    int depth = 0;
+    for (Layout *p = target; p; p = p->parent) stack[depth++] = p;
+
+    // capture phase
+    for (int i = depth - 1; i >= 0; --i) 
+    {
+        if (stack[i]->vtable.onBblEvtCapture)
+        {
+            stack[i]->vtable.onBblEvtCapture(stack[i], e);
+            if (e->handled) return;
+        }
+    }
+
+    // bubble phase
+    for (int i = 0; i < depth; i++) 
+    {
+        if (stack[i]->vtable.onBblEvt)
+        {
+            stack[i]->vtable.onBblEvt(stack[i], e);
+            if (e->handled) return;
         }
     }
 }

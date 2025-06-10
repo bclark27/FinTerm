@@ -10,34 +10,76 @@
 
 // types
 
+// pre defs
+
+struct Layout;
+struct BblEvt;
+
 // not used in layout base, but many derived types might use it in some way
 typedef enum Alignment
 {
     Alignment_Start,
     Alignment_Center,
-    Alignment_End,
+    Alignment_End
 } Alignment;
 
 typedef enum LayoutOrientation
 {
     LayoutOrientation_V,
-    LayoutOrientation_H,
+    LayoutOrientation_H
 } LayoutOrientation;
 
-typedef enum LayoutBubbleEventType
+// all bubble type events go here
+
+typedef enum BblEvtType
 {
-    LayoutBubbleEventType_Clicked  // LayoutBubbleEvent_Clicked
-} LayoutBubbleEventType;
+    BblEvtType_Click,
+    BblEvtType_Scroll,
+    BblEvtType_Key
+} BblEvtType;
 
-// pre defs
+typedef struct BblEvt
+{
+    struct Layout* target;
+    BblEvtType type;
+    bool handled;
+    void* evtData;
+} BblEvt;
 
-struct Layout;
-struct LayoutBubbleEvent;
+typedef struct BblEvt_Click
+{
+    struct Layout* target;
+    int x;
+    int y;
+    bool leftClick;
+    bool rightClick;
+    bool midClick;
+} BblEvt_Click;
 
-// callbacks
+typedef struct BblEvt_Key
+{
+    int raw;
+    char keyCode;
+    bool isAscii;
+    bool isCtrl;
+    bool isSpecial;
+} BblEvt_Key;
+
+typedef struct BblEvt_Scroll
+{
+    struct Layout* target;
+    int x;
+    int y;
+    bool up;
+    bool down;
+} BblEvt_Scroll;
+
+
+
+// draw!!!
 typedef void (*LayoutDrawCallback)(struct Layout* l, WINDOW *win, int x, int y, int width, int height);
+// called when the layout is about to be freed
 typedef void (*OnLayoutDestroy)(struct Layout* l);
-
 // called with mouse movement event, but ONLY if it is the first move interaction int the layout
 typedef void (*OnLayoutPointerEnter)(struct Layout* l, InputEvent* e);
 // called with mouse movement event, but ONLY if it is the first movement outside of the layout
@@ -45,9 +87,13 @@ typedef void (*OnLayoutPointerExit)(struct Layout* l, InputEvent* e);
 // called with mouse movement event, will be called for movement while pointer is in this layout, excluding the OnLayoutPointerEnter and OnLayoutPointerExit
 typedef void (*OnLayoutPointerMove)(struct Layout* l, InputEvent* e);
 // called only when the GUI manager decides this layout is now in focus
-typedef void (*OnLayoutPointerFocus)(struct Layout* l, InputEvent* e);
+typedef void (*OnLayoutFocus)(struct Layout* l);
 // called only when the GUI manager decides this layout is no longer in focus
-typedef void (*OnLayoutPointerUnFocus)(struct Layout* l, InputEvent* e);
+typedef void (*OnLayoutUnFocus)(struct Layout* l);
+// called during the target->root pass
+typedef void (*OnLayoutBblEvt)(struct Layout* l, struct BblEvt* e);
+// called during the root->target pass
+typedef void (*OnLayoutBblEvtCapture)(struct Layout* l, struct BblEvt* e);
 
 typedef struct Layout_VT
 {
@@ -56,8 +102,10 @@ typedef struct Layout_VT
     OnLayoutPointerEnter onPtrEnter;
     OnLayoutPointerExit onPtrExit;
     OnLayoutPointerMove onPtrMove;
-    OnLayoutPointerFocus onFocus;
-    OnLayoutPointerUnFocus onUnFocus;
+    OnLayoutFocus onFocus;
+    OnLayoutUnFocus onUnFocus;
+    OnLayoutBblEvt onBblEvt;
+    OnLayoutBblEvtCapture onBblEvtCapture;
 } Layout_VT;
 
 typedef struct Layout
@@ -70,6 +118,8 @@ typedef struct Layout
     struct Layout * children[LAYOUT_MAX_DIV];
     struct Layout * parent;
     LayoutOrientation orientation;
+
+    bool acceptsLiteralTab;
 
     double sizeRatio;
     int absSize;
@@ -85,6 +135,7 @@ typedef struct Layout
     bool visible;
 } Layout;
 
+
 Layout * Layout_Create();
 void Layout_Init(Layout * l);
 void Layout_Destroy(Layout * l);
@@ -96,10 +147,7 @@ void Layout_DetatchFromParent(Layout * child);
 Layout * Layout_RemoveChildIdx(Layout * parent, int idx);
 bool Layout_DestroyChildIdx(Layout * parent, int idx);
 
-void Layout_GetChildNodeAtPoint(Layout * l, int x, int y, Layout* hovBuff[], int hovBuffArrSize, int* hovBuffCurrLen);
-
-void Layout_Hover(Layout* l, InputEvent* e, bool hover);
-void Layout_Focus(Layout* l, InputEvent* e, bool focus);
+void Layout_HitTest(Layout * l, int x, int y, Layout* hovBuff[], int hovBuffArrSize, int* hovBuffCurrLen);
 
 
 #endif

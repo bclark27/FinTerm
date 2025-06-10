@@ -9,8 +9,8 @@ void label_onDestroy(Layout* l);
 void label_onPtrEnter(Layout* l, InputEvent* e);
 void label_onPtrExit(Layout* l, InputEvent* e);
 void label_onPtrMove(Layout* l, InputEvent* e);
-void label_onFocus(Layout* l, InputEvent* e);
-void label_onUnFocus(Layout* l, InputEvent* e);
+void label_onFocus(Layout* l);
+void label_onUnFocus(Layout* l);
 
 void label_disposeStr(Label * label);
 int label_lineCount(Label * label);
@@ -69,7 +69,7 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     if (!l) return;
 
     Label * label = (Label*)l;
-    if (l->isFocus)
+    if (l->isHover)
     {
         box(win, 0, 0);
     }
@@ -169,12 +169,12 @@ void label_onDestroy(Layout* l)
 
 void label_onPtrEnter(Layout* l, InputEvent* e)
 {
-    
+    l->isDirty = true;
 }
 
 void label_onPtrExit(Layout* l, InputEvent* e)
 {
-    
+    l->isDirty = true;
 }
 
 void label_onPtrMove(Layout* l, InputEvent* e)
@@ -182,14 +182,14 @@ void label_onPtrMove(Layout* l, InputEvent* e)
 
 }
 
-void label_onFocus(Layout* l, InputEvent* e)
+void label_onFocus(Layout* l)
 {
-    l->isDirty = true;
+    
 }
 
-void label_onUnFocus(Layout* l, InputEvent* e)
+void label_onUnFocus(Layout* l)
 {
-    l->isDirty = true;
+    
 }
 
 void label_disposeStr(Label * label)

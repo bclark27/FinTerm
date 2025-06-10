@@ -1,5 +1,6 @@
 #include "InputManager.h"
 
+#include "Logger.h"
 #include "Common.h"
 
 
@@ -101,12 +102,6 @@ bool parseCh(int ch, InputEvent* info)
         info->rightClick = info->mevent.bstate & BUTTON3_CLICKED;
         info->scrollUp = info->mevent.bstate & BUTTON4_PRESSED;
         info->scrollDown = info->mevent.bstate & BUTTON5_PRESSED;
-
-        if (info->leftClick ||
-            info->midClick ||
-            info->rightClick ||
-            info->scrollUp ||
-            info->scrollDown) Logger_Log("ERERE\n");
 
         return info->isMouse && (
             (info->mevent.bstate & REPORT_MOUSE_POSITION) ||

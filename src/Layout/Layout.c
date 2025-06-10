@@ -194,44 +194,6 @@ bool Layout_DestroyChildIdx(Layout * parent, int idx)
     return child != NULL;
 }
 
-void Layout_Hover(Layout* l, InputEvent* e, bool hover)
-{
-    if (!l || !e) return;
-
-    if (l->isHover == hover)
-    {
-        if (l->vtable.onPtrMove) l->vtable.onPtrMove(l, e);
-        return;
-    }
-
-    l->isHover = hover;
-    if (hover)
-    {
-        if (l->vtable.onPtrEnter) l->vtable.onPtrEnter(l, e);
-    }
-    else
-    {
-        if (l->vtable.onPtrExit) l->vtable.onPtrExit(l, e);
-    }
-}
-
-void Layout_Focus(Layout* l, InputEvent* e, bool focus)
-{
-    if (!l || !e) return;
-    if (l->isFocus == focus) return;
-
-    
-    l->isFocus = focus;
-    if (focus)
-    {
-        if (l->vtable.onFocus) l->vtable.onFocus(l, e);
-    }
-    else
-    {
-        if (l->vtable.onUnFocus) l->vtable.onUnFocus(l, e);
-    }
-}
-
 // PRIV
 
 bool layout_contains_point(Layout *layout, int x, int y)
@@ -240,8 +202,8 @@ bool layout_contains_point(Layout *layout, int x, int y)
 
     int left   = layout->abs_x;
     int top    = layout->abs_y;
-    int right  = layout->abs_x + layout->width;
-    int bottom = layout->abs_y + layout->height;
+    int right  = layout->abs_x + layout->width - 1;
+    int bottom = layout->abs_y + layout->height - 1;
 
     return (x >= left && x <= right && y >= top && y <= bottom);
 }
@@ -318,7 +280,7 @@ void DrawThisLayout(Layout * l, bool force)
     }
 }
 
-void Layout_GetChildNodeAtPoint(Layout * l, int x, int y, Layout* hovBuff[], int hovBuffArrSize, int* hovBuffCurrLen)
+void Layout_HitTest(Layout * l, int x, int y, Layout* hovBuff[], int hovBuffArrSize, int* hovBuffCurrLen)
 {
     if (!l || !hovBuffCurrLen || !hovBuff) return;
     if (*hovBuffCurrLen >= hovBuffArrSize) return;
@@ -329,7 +291,7 @@ void Layout_GetChildNodeAtPoint(Layout * l, int x, int y, Layout* hovBuff[], int
 
     for (int i = 0; i < l->childrenCount; i++)
     {
-        Layout_GetChildNodeAtPoint(l->children[i], x, y, hovBuff, hovBuffArrSize, hovBuffCurrLen);
+        Layout_HitTest(l->children[i], x, y, hovBuff, hovBuffArrSize, hovBuffCurrLen);
     }
 }
 
