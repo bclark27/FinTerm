@@ -80,7 +80,7 @@ void entry_onBblEvt(Layout* l, BblEvt* e)
     if (enableTabInput) setTabInput(this, true);
 
     bool actuallyDisableTabs = false;
-    actuallyDisableTabs |= e->type == BblEvtType_Key && (e->data.key.isSpecial && (e->data.key.raw == KEY_ENTER || e->data.key.raw == 27));
+    actuallyDisableTabs |= e->type == BblEvtType_Key && ((e->data.key.isSpecial && e->data.key.raw == 27) || (e->data.key.isCtrl && e->data.key.raw == 10));
     if (actuallyDisableTabs) setTabInput(this, false);
 }
 
