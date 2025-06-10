@@ -138,7 +138,10 @@ typedef struct Layout
     int abs_x;
     int abs_y;
     int childrenCount;
-    int padding;
+    int pad_up;
+    int pad_down;
+    int pad_left;
+    int pad_right;
     
     bool isDirty;
     bool isHover;

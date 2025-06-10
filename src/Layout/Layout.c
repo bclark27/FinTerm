@@ -1,5 +1,6 @@
 #include "Layout.h"
 
+#include "../Common.h"
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -25,6 +26,7 @@ Layout * Layout_Create()
 
 void Layout_Init(Layout * l)
 {
+    memset(l, 0, sizeof(Layout));
     l->sizeRatio = 1;
     l->absSize = -1;
     l->orientation = LayoutOrientation_H;
@@ -97,17 +99,26 @@ void Layout_SizeRefresh(Layout * l)
     l->win = newwin(l->height, l->width, l->abs_y, l->abs_x);
     DrawThisLayout(l, true);
 
+    int innerWidth = MAX(0, l->width - (l->pad_left + l->pad_right));
+    int innerHeight = MAX(0, l->height - (l->pad_up + l->pad_down));;
+
+    int xOffset = l->pad_left;
+    int yOffset = l->pad_up;
+
+    int corner_x = l->abs_x + xOffset;
+    int corner_y = l->abs_y + yOffset;
+    
     int ans[LAYOUT_MAX_DIV];
     if (l->orientation == LayoutOrientation_V)
     {
-        int curr_y = l->abs_y;
-        compute_layout_sizes(l->height, l->children, ans, l->childrenCount);
+        int curr_y = corner_y;
+        compute_layout_sizes(innerHeight, l->children, ans, l->childrenCount);
         for (int i = 0; i < l->childrenCount; i++)
         {
-            l->children[i]->width = l->width;
+            l->children[i]->width = innerWidth;
             l->children[i]->height = ans[i];
 
-            l->children[i]->abs_x = l->abs_x;
+            l->children[i]->abs_x = corner_x;
             l->children[i]->abs_y = curr_y;
 
             curr_y += ans[i];
@@ -115,15 +126,15 @@ void Layout_SizeRefresh(Layout * l)
     }
     else
     {
-        int curr_x = l->abs_x;
-        compute_layout_sizes(l->width, l->children, ans, l->childrenCount);
+        int curr_x = corner_x;
+        compute_layout_sizes(innerWidth, l->children, ans, l->childrenCount);
         for (int i = 0; i < l->childrenCount; i++)
         {
             l->children[i]->width = ans[i];
-            l->children[i]->height = l->height;
+            l->children[i]->height = innerHeight;
 
             l->children[i]->abs_x = curr_x;
-            l->children[i]->abs_y = l->abs_y;
+            l->children[i]->abs_y = corner_y;
 
             curr_x += ans[i];
         }
