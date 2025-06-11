@@ -103,6 +103,8 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
 {
     if (!l) return;
 
+    int color = Colors_GetAttr(7, -1);
+    wattron(win, COLOR_PAIR(color));
     Label * label = (Label*)l;
     if (l->isFocus)
     {
@@ -203,6 +205,7 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     {
         free(wrappedText);
     }
+    wattroff(win, COLOR_PAIR(color));
 }
 
 void label_onDestroy(Layout* l)

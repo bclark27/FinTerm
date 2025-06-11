@@ -4,6 +4,7 @@
 #include <ncursesw/ncurses.h>
 #include <locale.h>
 #include <string.h>
+#include "Colors.h"
 
 #define MAX_DEPTH   (2000)
 #define MAX_EVT_Q   (2000)
@@ -60,8 +61,8 @@ void GUIManager_Init()
 {
     if (manager.init) return;
 
-    setlocale(LC_ALL, "en_US.UTF-8");
     initscr();
+    setlocale(LC_ALL, "en_US.UTF-8");
     start_color();
     use_default_colors();
     keypad(stdscr, TRUE);   // Enable function keys like KEY_RESIZE
@@ -69,6 +70,8 @@ void GUIManager_Init()
     cbreak();
     nodelay(stdscr, TRUE);
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);  // Enable mouse events
+
+    Colors_Init();
 
     manager.hovBuffCurrSize = 0;
     manager.init = true;
@@ -84,6 +87,14 @@ void GUIManager_Init()
         GUIManager_Draw(true);
         refresh();
     }
+    
+
+    //werase(manager.root->win);
+    init_pair(1, COLOR_RED, COLOR_CYAN);
+    //wattron(manager.root->win, COLOR_PAIR(1));
+    //mvwprintw(manager.root->win, 1, 1, "This should be red.");
+    //wattroff(manager.root->win, COLOR_PAIR(1));
+    //wrefresh(manager.root->win);
 }
 
 void GUIManager_Destroy()

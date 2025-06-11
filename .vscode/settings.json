@@ -5,6 +5,7 @@
         "stdarg.h": "c",
         "inputmanager.h": "c",
         "layout.h": "c",
-        "label.h": "c"
+        "label.h": "c",
+        "locale.h": "c"
     }
 }

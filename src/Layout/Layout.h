@@ -5,6 +5,7 @@
 
 #include "../Logger.h"
 #include "../InputManager.h"
+#include "../Colors.h"
 
 #define LAYOUT_MAX_DIV  (20)
 

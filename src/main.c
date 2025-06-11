@@ -56,8 +56,6 @@ int main()
 {
   signal(SIGINT, handle_sigint);  // Register Ctrl+C handler
 
-
-
   long lastTime = 0;
   int events_count;
   InputEvent events[INPUT_EVENT_BUFFER_SIZE];
