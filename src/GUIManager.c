@@ -64,7 +64,6 @@ void GUIManager_Init()
     initscr();
     start_color();
     use_default_colors();
-    curs_set(FALSE);
     keypad(stdscr, TRUE);   // Enable function keys like KEY_RESIZE
     noecho();
     cbreak();
@@ -78,7 +77,7 @@ void GUIManager_Init()
     manager.currEventQueueIdx = 0;
     manager.eventQueueSize = 0;
     GUIManager_LayoutRefresh(true);
-
+    
     for (int i = 0; i < 2; i++)
     {
         GUIManager_LayoutRefresh(true);
@@ -245,10 +244,16 @@ void handleMouseEvent(InputEvent* evt)
 
     bool isFocusEvent = evt->leftClick;
     Layout* target = NULL;
-    int lastIdx = manager.hovBuffCurrSize - 1;
-    if (lastIdx >= 0)
+    for (int i = 0; i < manager.hovBuffCurrSize; i++)
     {
-        target = manager.hovBuffer[lastIdx];
+        if (manager.hovBuffer[i]->focusable)
+        {
+            target = manager.hovBuffer[i];
+        }
+        else
+        {
+            break;
+        }
     }
 
     if (isFocusEvent)
@@ -489,7 +494,7 @@ int treeSize(Layout* node, bool includeInvisible)
 
 Layout* find_prev_focusable_internal(Layout *node, Layout *current, bool *foundCurrent) 
 {
-    if (!node || !node->visible || node->tabNavSkip) return NULL;
+    if (!node || !node->visible || !node->focusable) return NULL;
 
     // 1) Dive into children in reverse order
     for (int i = node->childrenCount - 1; i >= 0; --i) 
@@ -524,7 +529,7 @@ Layout* find_prev_focusable(Layout *root, Layout *current)
 
 Layout* find_next_focusable_internal(Layout *node, Layout *current, bool *foundCurrent) 
 {
-    if (!node || !node->visible || node->tabNavSkip) return NULL;
+    if (!node || !node->visible || !node->focusable) return NULL;
 
     // 1) If this is the current, mark that we’ve seen it.
     if (node == current) {

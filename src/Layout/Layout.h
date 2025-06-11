@@ -148,7 +148,7 @@ typedef struct Layout
     bool isFocus;
     bool visible;
     bool acceptsLiteralTab;
-    bool tabNavSkip;
+    bool focusable;
 } Layout;
 
 

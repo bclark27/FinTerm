@@ -32,6 +32,7 @@ void Layout_Init(Layout * l)
     l->orientation = LayoutOrientation_H;
     l->visible = true;
     l->isDirty = true;
+    l->focusable = true;
 }
 
 void Layout_Destroy(Layout * l)

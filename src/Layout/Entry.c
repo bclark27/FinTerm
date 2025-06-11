@@ -9,7 +9,9 @@ void entry_onFocus(Layout* l);
 void entry_onUnFocus(Layout* l);
 void entry_onBblEvt(Layout* l, BblEvt* e);
 
-void setTabInput(Entry* entry, bool en);
+void entry_setTabInput(Entry* entry, bool en);
+void entry_consumeTextChar(Entry* entry, BblEvt_Key* key);
+char* entry_modifyString(char* original, char ch, bool backspace);
 
 // vtable
 
@@ -41,7 +43,8 @@ Entry * Entry_Create()
 
     // create the label inside
     entry->labelChild = Label_Create();
-    ((Layout*)(entry->labelChild))->tabNavSkip = true;
+    ((Layout*)(entry->labelChild))->focusable = false;
+    entry->labelChild->textWrap = true;
     Layout_AddChild((Layout*)entry, (Layout*)entry->labelChild);
 
     // set default text
@@ -67,25 +70,91 @@ void entry_onFocus(Layout* l)
 
 void entry_onUnFocus(Layout* l)
 {
-    setTabInput((Entry*)l, false);
+    entry_setTabInput((Entry*)l, false);
 }
 
 void entry_onBblEvt(Layout* l, BblEvt* e)
 {
     Entry* this = (Entry*)l;
 
-    bool enableTabInput = false;
-    enableTabInput |= e->type == BblEvtType_Click && e->data.click.leftClick;
-    enableTabInput |= e->type == BblEvtType_Key && (e->data.key.isAscii || e->data.key.isSpecial);
-    if (enableTabInput) setTabInput(this, true);
+    if (e->type == BblEvtType_Click || e->type == BblEvtType_Key)
+    {
 
-    bool actuallyDisableTabs = false;
-    actuallyDisableTabs |= e->type == BblEvtType_Key && ((e->data.key.isSpecial && e->data.key.raw == 27)); //(e->data.key.isCtrl && e->data.key.raw == 10) add this for entry escape
-    if (actuallyDisableTabs) setTabInput(this, false);
+        bool enableTabInput = false;
+        enableTabInput |= e->type == BblEvtType_Click && e->data.click.leftClick;
+        enableTabInput |= e->type == BblEvtType_Key && (e->data.key.isAscii || e->data.key.isSpecial);
+        if (enableTabInput) entry_setTabInput(this, true);
+    
+        bool actuallyDisableTabs = false;
+        actuallyDisableTabs |= e->type == BblEvtType_Key && ((e->data.key.isSpecial && e->data.key.raw == 27)); //(e->data.key.isCtrl && e->data.key.raw == 10) add this for entry escape
+        if (actuallyDisableTabs) entry_setTabInput(this, false);
+
+        if (e->type == BblEvtType_Key && (e->data.key.isAscii || e->data.key.raw == KEY_BACKSPACE || e->data.key.raw == 0x9))// )
+        {
+            entry_consumeTextChar(this, &(e->data.key));
+        }
+    }
+    else if (e->type == BblEvtType_Focus)
+    {
+        if (e->data.focus.focus && e->data.focus.target == (Layout*)(this->labelChild))
+        {
+            entry_setTabInput(this, true);
+        }
+    }
 }
 
-void setTabInput(Entry* entry, bool en)
+void entry_setTabInput(Entry* entry, bool en)
 {
     ((Layout*)(entry))->acceptsLiteralTab = en;
     ((Layout*)(entry->labelChild))->acceptsLiteralTab = en;
+}
+
+void entry_consumeTextChar(Entry* entry, BblEvt_Key* key)
+{
+    bool handled = false;
+    if (key->isAscii)
+    {
+        char* newStr = entry_modifyString(entry->labelChild->str, key->keyCode, false);
+        Label_SetTextCpy(entry->labelChild, newStr);
+        handled = true;
+    }
+    else if (key->raw == KEY_BACKSPACE)
+    {
+        char* newStr = entry_modifyString(entry->labelChild->str, 0, true);
+        Label_SetTextCpy(entry->labelChild, newStr);
+        handled = true;
+    }
+    else if (key->raw == 0x9)
+    {
+        char* newStr = entry_modifyString(entry->labelChild->str, '\t', false);
+        Label_SetTextCpy(entry->labelChild, newStr);
+        handled = true;
+    }
+}
+
+char* entry_modifyString(char* original, char ch, bool backspace)
+{
+    size_t len = original ? strlen(original) : 0;
+
+    if (backspace) {
+        if (len == 0) {
+            // Already empty, return a new empty string
+            char* new_str = malloc(1);
+            if (new_str) new_str[0] = '\0';
+            return new_str;
+        }
+        char* new_str = malloc(len); // One less than original
+        if (!new_str) return NULL;
+        memcpy(new_str, original, len - 1);
+        new_str[len - 1] = '\0';
+        return new_str;
+    } else {
+        // Append case
+        char* new_str = malloc(len + 2); // +1 for new char, +1 for null terminator
+        if (!new_str) return NULL;
+        if (original) memcpy(new_str, original, len);
+        new_str[len] = ch;
+        new_str[len + 1] = '\0';
+        return new_str;
+    }
 }

@@ -97,9 +97,9 @@ bool parseCh(int ch, InputEvent* info)
     if (ch == KEY_MOUSE)
     {
         info->isMouse = getmouse(&info->mevent) == OK;
-        info->leftClick = info->mevent.bstate & BUTTON1_CLICKED;
-        info->midClick = info->mevent.bstate & BUTTON2_CLICKED;
-        info->rightClick = info->mevent.bstate & BUTTON3_CLICKED;
+        info->leftClick = info->mevent.bstate & BUTTON1_RELEASED;
+        info->midClick = info->mevent.bstate & BUTTON2_RELEASED;
+        info->rightClick = info->mevent.bstate & BUTTON3_RELEASED;
         info->scrollUp = info->mevent.bstate & BUTTON4_PRESSED;
         info->scrollDown = info->mevent.bstate & BUTTON5_PRESSED;
 

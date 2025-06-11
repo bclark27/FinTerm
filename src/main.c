@@ -29,7 +29,7 @@ void buildTestGUI(Layout* root)
   for (int i = 0; i < 2; i++)
   {
     Label * l = Label_Create();
-    Label_SetTextCpy(l, "hello there\nA\nB\nfriend");
+    Label_SetTextFmt(l, "hello there\nA\nB\nfriend\n%d\n", 400);
     l->textOption = LabelTextOptions_Center;
     l->horzAlign = Alignment_Start + i;
     l->vertAlign = Alignment_Start + i;

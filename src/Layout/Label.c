@@ -15,6 +15,7 @@ void label_onUnFocus(Layout* l);
 void label_disposeStr(Label * label);
 int label_lineCount(Label * label);
 int label_textWidth(Label * label);
+char* label_wrapText(char* str, int maxWidth, bool wrap);
 
 // vtable
 
@@ -45,13 +46,20 @@ void Label_SetTextCpy(Label * label, char* str)
 {
     label_disposeStr(label);
 
-    int len = strlen(str);
-    label->str = malloc(len + 1);
-    memmove(label->str, str, len);
-    label->str[len] = 0;
+    if (str)
+    {
+        int len = strlen(str);
+        label->str = malloc(len + 1);
+        memmove(label->str, str, len);
+        label->str[len] = 0;
+    }
+    else
+    {
+        label->str = NULL;
+    }
+
     label->strIsCpy = true;
     label->strDisposed = false;
-
     ((Layout*)label)->isDirty = true;
 }
 
@@ -59,6 +67,31 @@ void Label_SetTextPtr(Label * label, char* str)
 {
     label_disposeStr(label);
     label->str = str;
+    label->strIsCpy = false;
+    label->strDisposed = false;
+    ((Layout*)label)->isDirty = true;
+}
+
+void Label_SetTextFmt(Label *label, const char *fmt, ...) {
+    label_disposeStr(label);
+
+    va_list args;
+    va_start(args, fmt);
+    va_list args_copy;
+    va_copy(args_copy, args);
+    
+    int len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+
+    label->str = malloc(len + 1);
+    if (!label->str) {
+        va_end(args_copy);
+        return;
+    }
+
+    vsnprintf(label->str, len + 1, fmt, args_copy);
+    va_end(args_copy);
+
     label->strIsCpy = false;
     label->strDisposed = false;
     ((Layout*)label)->isDirty = true;
@@ -75,9 +108,12 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     {
         box(win, 0, 0);
     }
-    if (!label->strDisposed && label->str)
+
+    char* wrappedText = label_wrapText(label->str, width, label->textWrap);
+
+    if (!label->strDisposed && wrappedText)
     {
-        int len = strlen(label->str);
+        int len = strlen(wrappedText);
         int textWidth = label_textWidth(label);
         int textWidth_2 = textWidth / 2;
         int lc = label_lineCount(label);
@@ -113,14 +149,14 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
                 break;
         }
 
-        char* currLine = label->str;
+        char* currLine = wrappedText;
         int currLineNum = 0;
         int currLineLen = 0;
         for (int i = 0; i < len; i++)
         {
-            if (label->str[i] == '\n')
+            if (wrappedText[i] == '\n')
             {
-                label->str[i] = 0;
+                wrappedText[i] = 0;
                 currLineLen = strlen(currLine);
 
                 int currLineX = 0;
@@ -138,9 +174,9 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
                 }
 
                 mvwprintw(win, corner_y + currLineNum, corner_x + currLineX, "%s", currLine);
-                label->str[i] = '\n';
+                wrappedText[i] = '\n';
                 currLineNum++;
-                currLine = &(label->str[i + 1]);
+                currLine = &(wrappedText[i + 1]);
             }
             else if (i == len - 1)
             {
@@ -161,6 +197,11 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
                 mvwprintw(win, corner_y + currLineNum, corner_x + currLineX, "%s", currLine); 
             }
         }
+    }
+
+    if (wrappedText)
+    {
+        free(wrappedText);
     }
 }
 
@@ -196,8 +237,12 @@ void label_onUnFocus(Layout* l)
 
 void label_disposeStr(Label * label)
 {
-    if (!label || !label->str || label->strDisposed) return;
+    if (!label || label->strDisposed) return;
+
+    label->strDisposed = true;
     
+    if (!label->str) return;
+
     if (label->strIsCpy)
     {
         free(label->str);
@@ -241,4 +286,64 @@ int label_textWidth(Label * label)
     }
 
     return longestLine;
+}
+
+char* label_wrapText(char* str, int maxWidth, bool wrap)
+{
+    if (!str) return NULL;
+    if (!wrap)
+    {
+        char* ret = malloc(strlen(str) + 1);
+        strcpy(ret, str);
+        return ret;
+    }
+
+    int len = strlen(str);
+    char* result = malloc(len * 2 + 1); // assume worst case: every word gets a newline
+    if (!result) return NULL;
+
+    int lineLen = 0;
+    char* resPtr = result;
+    const char* wordStart = str;
+    const char* ptr = str;
+
+    while (*ptr)
+    {
+        // Find end of word or newline
+        if (*ptr == ' ' || *ptr == '\n' || *(ptr + 1) == '\0')
+        {
+            int wordLen = ptr - wordStart;
+            if (*(ptr + 1) == '\0') wordLen++; // include last char
+
+            // If word doesn't fit in current line
+            if (lineLen + wordLen > maxWidth && lineLen > 0)
+            {
+                *resPtr++ = '\n';
+                lineLen = 0;
+            }
+
+            // Copy the word
+            strncpy(resPtr, wordStart, wordLen);
+            resPtr += wordLen;
+            lineLen += wordLen;
+
+            // Add space or newline
+            if (*ptr == ' ')
+            {
+                *resPtr++ = ' ';
+                lineLen++;
+            }
+            else if (*ptr == '\n')
+            {
+                *resPtr++ = '\n';
+                lineLen = 0;
+            }
+
+            wordStart = ptr + 1;
+        }
+        ptr++;
+    }
+
+    *resPtr = '\0';
+    return result;
 }

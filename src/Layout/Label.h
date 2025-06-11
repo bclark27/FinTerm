@@ -23,6 +23,7 @@ typedef struct Label
     Alignment vertAlign;
     Alignment horzAlign;
     LabelTextOption textOption;
+    bool textWrap;
 } Label;
 
 // funcs
@@ -30,5 +31,6 @@ typedef struct Label
 Label * Label_Create();
 void Label_SetTextCpy(Label * label, char* str);
 void Label_SetTextPtr(Label * label, char* str);
+void Label_SetTextFmt(Label *label, const char *fmt, ...);
 
 #endif
