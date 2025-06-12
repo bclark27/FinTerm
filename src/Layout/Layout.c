@@ -189,7 +189,6 @@ void Layout_SetVis(Layout * l, bool visible)
     if (l->visible == visible) return;
     l->visible = visible;
     l->resize = true;
-    if (l->parent) l->parent->resize = true;
 }
 
 void Layout_SetSize(Layout * l, int size, bool isAbs)
@@ -208,7 +207,6 @@ void Layout_SetSize(Layout * l, int size, bool isAbs)
     }
 
     l->resize = true;
-    if (l->parent) l->parent->resize = true;
 }
 
 void Layout_DetatchFromParent(Layout * child)

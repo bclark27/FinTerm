@@ -88,14 +88,6 @@ void GUIManager_Init()
         GUIManager_Draw(true);
         refresh();
     }
-    
-
-    //werase(manager.root->win);
-    init_pair(1, COLOR_RED, COLOR_CYAN);
-    //wattron(manager.root->win, COLOR_PAIR(1));
-    //mvwprintw(manager.root->win, 1, 1, "This should be red.");
-    //wattroff(manager.root->win, COLOR_PAIR(1));
-    //wrefresh(manager.root->win);
 }
 
 void GUIManager_Destroy()
@@ -612,7 +604,6 @@ void depthFirstSizeRef(Layout* l)
             getCurrTermSize(&r, &c);
             Layout_SizeRefresh(manager.root, 0, 0, c, r, false);
         }
-        l->resize = false;
         return;
     }
     else
