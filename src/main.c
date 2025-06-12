@@ -22,20 +22,42 @@ void handle_sigint(int sig) {
   endwin();
   exit(0);
 }
+static Layout* dissapear;
+void click(Layout* l)
+{
+  Layout_SetVis(dissapear, false);
+  Logger_Log("clicked\n");
+}
+
+Layout* buildTriple(LayoutOrientation o)
+{
+  Layout* r = Layout_Create();
+  r->orientation = o;
+
+  for (int i = 0; i < 3; i++)
+  {
+    Label * l = Label_Create();
+    // Label_SetTextFmt(l, "hello there\nA\nB\nfriend\n%d\n", 400);
+    Label_SetTextFmt(l, "hello\n1");
+    l->textOption = LabelTextOptions_Center;
+    l->horzAlign = Alignment_Start + i;
+    l->vertAlign = Alignment_Start;// + i;
+    Layout_AddChild(r, (Layout*)l);
+
+    if (i == 0) dissapear = (Layout*)l;
+  }
+
+  return r;
+}
 
 void buildTestGUI(Layout* root)
 {
-  
-  for (int i = 0; i < 2; i++)
+  for (int i = 0; i < 1; i++)
   {
-    Label * l = Label_Create();
-    Label_SetTextFmt(l, "hello there\nA\nB\nfriend\n%d\n", 400);
-    l->textOption = LabelTextOptions_Center;
-    l->horzAlign = Alignment_Start + i;
-    l->vertAlign = Alignment_Start + i;
-    Layout_AddChild(root, (Layout*)l);
+    Layout_AddChild(root, buildTriple(LayoutOrientation_H));
   }
-
+  
+  Layout_AddChild(root, (Layout*)Entry_Create());
   Layout_AddChild(root, (Layout*)Entry_Create());
 
   for (int i = 0; i < 2; i++)
@@ -45,6 +67,7 @@ void buildTestGUI(Layout* root)
     l->textOption = LabelTextOptions_Center;
     l->horzAlign = Alignment_Start + i;
     l->vertAlign = Alignment_Start + i;
+    //l->layout.vtable.onFocus = click;
     Layout_AddChild(root, (Layout*)l);
   }
 

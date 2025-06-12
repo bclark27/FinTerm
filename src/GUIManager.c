@@ -185,7 +185,7 @@ void GUIManager_LayoutRefresh(bool force)
 
     if (manager.root->width != c || manager.root->height != r || force)
     {
-        Layout_SizeRefresh(manager.root, 0, 0, c, r);
+        Layout_SizeRefresh(manager.root, 0, 0, c, r, force);
     }
     else
     {
@@ -375,7 +375,7 @@ void focusLayout(Layout* l)
         if (manager.focused)
         {
             manager.focused->isFocus = true;
-            if (manager.focused->vtable.onUnFocus) manager.focused->vtable.onUnFocus(manager.focused);
+            if (manager.focused->vtable.onFocus) manager.focused->vtable.onFocus(manager.focused);
 
             BblEvt be;
 
@@ -604,13 +604,13 @@ void depthFirstSizeRef(Layout* l)
     {
         if (l->parent)
         {
-            Layout_SizeRefreshSameParams(l->parent);
+            Layout_SizeRefreshSameParams(l->parent, false);
         }
         else
         {
             int r,c;
             getCurrTermSize(&r, &c);
-            Layout_SizeRefresh(manager.root, 0, 0, c, r);
+            Layout_SizeRefresh(manager.root, 0, 0, c, r, false);
         }
         l->resize = false;
         return;

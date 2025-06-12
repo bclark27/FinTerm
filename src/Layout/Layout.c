@@ -13,6 +13,9 @@ void compute_layout_sizes(int total_size, struct Layout** elements, int* ret, in
 void DrawThisLayout(Layout * l, bool force);
 void removeArrayItem(void* arr, int eleSize, int eleCount, int idx);
 
+void drawPhase1(Layout* l, bool force);
+void drawPhase2(Layout* l);
+
 // PUBLIC FUNCS
 
 
@@ -75,25 +78,16 @@ void Layout_Destroy(Layout * l)
 
 void Layout_Draw(Layout * l, bool force)
 {
-    if (!l) return;
-
-    if (l->redraw || force)
-    {
-        force = true;
-        DrawThisLayout(l, force);
-    }
-
-    for (int i = 0; i < l->childrenCount; i++)
-        if (l->children[i])
-            Layout_Draw(l->children[i], force);
+    drawPhase1(l, force);
+    drawPhase2(l);
 }
 
-void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height)
+void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height, bool force)
 {
     if (!l) return;
     
     // if the size changed then lets redo the window and mark dirty
-    if (!l->win || l->abs_x != x || l->abs_y != y || l->width != width || l->height != height || l->resize)
+    if (!l->win || l->abs_x != x || l->abs_y != y || l->width != width || l->height != height || l->resize || force)
     {
         if (l->win)
         {
@@ -141,7 +135,7 @@ void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height)
 
             curr_y += ans[i];
 
-            Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h);
+            Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h, force);
         }
     }
     else
@@ -158,15 +152,15 @@ void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height)
 
             curr_x += ans[i];
             
-            Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h);
+            Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h, force);
         }
     }
 }
 
-void Layout_SizeRefreshSameParams(Layout* l)
+void Layout_SizeRefreshSameParams(Layout* l, bool force)
 {
     if (!l) return;
-    Layout_SizeRefresh(l, l->abs_x, l->abs_y, l->width, l->height);
+    Layout_SizeRefresh(l, l->abs_x, l->abs_y, l->width, l->height, force);
 }
 
 bool Layout_AddChild(Layout * parent, Layout * child)
@@ -184,7 +178,7 @@ bool Layout_AddChild(Layout * parent, Layout * child)
     parent->children[parent->childrenCount++] = child;
     child->parent = parent;
     
-    Layout_SizeRefreshSameParams(parent);
+    Layout_SizeRefreshSameParams(parent, false);
 
     return true;
 }
@@ -234,7 +228,7 @@ void Layout_DetatchFromParent(Layout * child)
             }
         }
         child->parent = NULL;
-        Layout_SizeRefreshSameParams(p);
+        Layout_SizeRefreshSameParams(p, false);
     }
 }
 
@@ -370,3 +364,34 @@ void removeArrayItem(void* arr, int eleSize, int eleCount, int idx)
     }
 }
 
+void drawPhase1(Layout* l, bool force)
+{
+    if (!l) return;
+
+    if ((l->redraw || force) && l->win)
+    {
+        l->redraw = false;
+        
+        werase(l->win);
+        if (l->vtable.draw)
+        {
+            l->vtable.draw(l, l->win, l->abs_x, l->abs_y, l->width, l->height);
+        }
+    }
+
+    for (int i = 0; i < l->childrenCount; i++)
+    {
+        drawPhase1(l->children[i], force);
+    }
+}
+void drawPhase2(Layout* l)
+{
+    if (!l) return;
+
+    if (l->win) wnoutrefresh(l->win);
+
+    for (int i = 0; i < l->childrenCount; i++)
+    {
+        drawPhase2(l->children[i]);
+    }
+}
