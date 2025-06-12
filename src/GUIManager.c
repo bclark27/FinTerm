@@ -39,6 +39,7 @@ void doBubble(BblEvt * e);
 int treeSize(Layout* node, bool includeInvisible);
 Layout* getNextTabNav(bool forward);
 void freezeEventQueue(BblEvt* buffer, int* size);
+void depthFirstSizeRef(Layout* l);
 
 // layout vtable
 
@@ -184,9 +185,11 @@ void GUIManager_LayoutRefresh(bool force)
 
     if (manager.root->width != c || manager.root->height != r || force)
     {
-        manager.root->width = c;
-        manager.root->height = r;
-        Layout_SizeRefresh(manager.root);
+        Layout_SizeRefresh(manager.root, 0, 0, c, r);
+    }
+    else
+    {
+        depthFirstSizeRef(manager.root);
     }
 }
 
@@ -591,4 +594,32 @@ void freezeEventQueue(BblEvt* buffer, int* size)
         if (qidx < 0) qidx = MAX_EVT_Q - 1;
     }
     *size = manager.eventQueueSize;
+}
+
+void depthFirstSizeRef(Layout* l)
+{
+    if (!l) return;
+    
+    if (l->resize)
+    {
+        if (l->parent)
+        {
+            Layout_SizeRefreshSameParams(l->parent);
+        }
+        else
+        {
+            int r,c;
+            getCurrTermSize(&r, &c);
+            Layout_SizeRefresh(manager.root, 0, 0, c, r);
+        }
+        l->resize = false;
+        return;
+    }
+    else
+    {
+        for (int i = 0; i < l->childrenCount; i++)
+        {
+            depthFirstSizeRef(l->children[i]);
+        }
+    }
 }

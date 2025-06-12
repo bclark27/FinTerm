@@ -144,7 +144,8 @@ typedef struct Layout
     int pad_left;
     int pad_right;
     
-    bool isDirty;
+    bool redraw;
+    bool resize;
     bool isHover;
     bool isFocus;
     bool visible;
@@ -157,8 +158,11 @@ Layout * Layout_Create();
 void Layout_Init(Layout * l);
 void Layout_Destroy(Layout * l);
 void Layout_Draw(Layout * l, bool force);
-void Layout_SizeRefresh(Layout * l);
+void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height);
+void Layout_SizeRefreshSameParams(Layout* l);
 bool Layout_AddChild(Layout * parent, Layout * child);
+void Layout_SetVis(Layout * l, bool visible);
+void Layout_SetSize(Layout * l, int size, bool isAbs);
 
 void Layout_DetatchFromParent(Layout * child);
 Layout * Layout_RemoveChildIdx(Layout * parent, int idx);

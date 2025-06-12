@@ -60,7 +60,7 @@ void Label_SetTextCpy(Label * label, char* str)
 
     label->strIsCpy = true;
     label->strDisposed = false;
-    ((Layout*)label)->isDirty = true;
+    ((Layout*)label)->redraw = true;
 }
 
 void Label_SetTextPtr(Label * label, char* str)
@@ -69,7 +69,7 @@ void Label_SetTextPtr(Label * label, char* str)
     label->str = str;
     label->strIsCpy = false;
     label->strDisposed = false;
-    ((Layout*)label)->isDirty = true;
+    ((Layout*)label)->redraw = true;
 }
 
 void Label_SetTextFmt(Label *label, const char *fmt, ...) {
@@ -94,7 +94,7 @@ void Label_SetTextFmt(Label *label, const char *fmt, ...) {
 
     label->strIsCpy = false;
     label->strDisposed = false;
-    ((Layout*)label)->isDirty = true;
+    ((Layout*)label)->redraw = true;
 }
 
 // priv
@@ -215,12 +215,12 @@ void label_onDestroy(Layout* l)
 
 void label_onPtrEnter(Layout* l, InputEvent* e)
 {
-    l->isDirty = true;
+    l->redraw = true;
 }
 
 void label_onPtrExit(Layout* l, InputEvent* e)
 {
-    l->isDirty = true;
+    l->redraw = true;
 }
 
 void label_onPtrMove(Layout* l, InputEvent* e)
@@ -230,12 +230,12 @@ void label_onPtrMove(Layout* l, InputEvent* e)
 
 void label_onFocus(Layout* l)
 {
-    l->isDirty = true;
+    l->redraw = true;
 }
 
 void label_onUnFocus(Layout* l)
 {
-    l->isDirty = true;
+    l->redraw = true;
 }
 
 void label_disposeStr(Label * label)

@@ -31,7 +31,8 @@ void Layout_Init(Layout * l)
     l->absSize = -1;
     l->orientation = LayoutOrientation_H;
     l->visible = true;
-    l->isDirty = true;
+    l->redraw = true;
+    l->resize = true;
     l->focusable = true;
 }
 
@@ -76,7 +77,7 @@ void Layout_Draw(Layout * l, bool force)
 {
     if (!l) return;
 
-    if (l->isDirty || force)
+    if (l->redraw || force)
     {
         force = true;
         DrawThisLayout(l, force);
@@ -87,18 +88,28 @@ void Layout_Draw(Layout * l, bool force)
             Layout_Draw(l->children[i], force);
 }
 
-void Layout_SizeRefresh(Layout * l)
+void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height)
 {
     if (!l) return;
     
-    if (l->win)
+    // if the size changed then lets redo the window and mark dirty
+    if (!l->win || l->abs_x != x || l->abs_y != y || l->width != width || l->height != height || l->resize)
     {
-        delwin(l->win);
-        l->win = NULL;
+        if (l->win)
+        {
+            delwin(l->win);
+            l->win = NULL;
+        }
+
+        l->height = height;
+        l->width = width;
+        l->abs_x = x;
+        l->abs_y = y;
+
+        l->win = newwin(l->height, l->width, l->abs_y, l->abs_x);
+        l->redraw = true;
+        l->resize = false;
     }
-    
-    l->win = newwin(l->height, l->width, l->abs_y, l->abs_x);
-    DrawThisLayout(l, true);
 
     int innerWidth = MAX(0, l->width - (l->pad_left + l->pad_right));
     int innerHeight = MAX(0, l->height - (l->pad_up + l->pad_down));;
@@ -109,6 +120,12 @@ void Layout_SizeRefresh(Layout * l)
     int corner_x = l->abs_x + xOffset;
     int corner_y = l->abs_y + yOffset;
     
+
+    int c_x;
+    int c_y;
+    int c_w;
+    int c_h;
+
     int ans[LAYOUT_MAX_DIV];
     if (l->orientation == LayoutOrientation_V)
     {
@@ -116,13 +133,15 @@ void Layout_SizeRefresh(Layout * l)
         compute_layout_sizes(innerHeight, l->children, ans, l->childrenCount);
         for (int i = 0; i < l->childrenCount; i++)
         {
-            l->children[i]->width = innerWidth;
-            l->children[i]->height = ans[i];
+            c_w = innerWidth;
+            c_h = ans[i];
 
-            l->children[i]->abs_x = corner_x;
-            l->children[i]->abs_y = curr_y;
+            c_x = corner_x;
+            c_y = curr_y;
 
             curr_y += ans[i];
+
+            Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h);
         }
     }
     else
@@ -131,21 +150,23 @@ void Layout_SizeRefresh(Layout * l)
         compute_layout_sizes(innerWidth, l->children, ans, l->childrenCount);
         for (int i = 0; i < l->childrenCount; i++)
         {
-            l->children[i]->width = ans[i];
-            l->children[i]->height = innerHeight;
+            c_w = ans[i];
+            c_h = innerHeight;
 
-            l->children[i]->abs_x = curr_x;
-            l->children[i]->abs_y = corner_y;
+            c_x = curr_x;
+            c_y = corner_y;
 
             curr_x += ans[i];
+            
+            Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h);
         }
     }
-    
-    
-    for (int i = 0; i < l->childrenCount; i++)
-    {
-        Layout_SizeRefresh(l->children[i]);
-    }
+}
+
+void Layout_SizeRefreshSameParams(Layout* l)
+{
+    if (!l) return;
+    Layout_SizeRefresh(l, l->abs_x, l->abs_y, l->width, l->height);
 }
 
 bool Layout_AddChild(Layout * parent, Layout * child)
@@ -163,9 +184,37 @@ bool Layout_AddChild(Layout * parent, Layout * child)
     parent->children[parent->childrenCount++] = child;
     child->parent = parent;
     
-    Layout_SizeRefresh(parent);
+    Layout_SizeRefreshSameParams(parent);
 
     return true;
+}
+
+void Layout_SetVis(Layout * l, bool visible)
+{
+    if (!l) return;
+    if (l->visible == visible) return;
+    l->visible = visible;
+    l->resize = true;
+    if (l->parent) l->parent->resize = true;
+}
+
+void Layout_SetSize(Layout * l, int size, bool isAbs)
+{
+    if (!l) return;
+
+    if (isAbs)
+    {
+        l->absSize = size;
+        l->sizeRatio = 1;
+    }
+    else
+    {
+        l->absSize = -1;
+        l->sizeRatio = size;
+    }
+
+    l->resize = true;
+    if (l->parent) l->parent->resize = true;
 }
 
 void Layout_DetatchFromParent(Layout * child)
@@ -185,7 +234,7 @@ void Layout_DetatchFromParent(Layout * child)
             }
         }
         child->parent = NULL;
-        Layout_SizeRefresh(p);
+        Layout_SizeRefreshSameParams(p);
     }
 }
 
@@ -282,9 +331,9 @@ void DrawThisLayout(Layout * l, bool force)
 {
     if (!l) return;
 
-    if ((l->isDirty || force) && l->win)
+    if ((l->redraw || force) && l->win)
     {
-        l->isDirty = false;
+        l->redraw = false;
         
         werase(l->win);
         if (l->vtable.draw) l->vtable.draw(l, l->win, l->abs_x, l->abs_y, l->width, l->height);
@@ -320,3 +369,4 @@ void removeArrayItem(void* arr, int eleSize, int eleCount, int idx)
         );
     }
 }
+
