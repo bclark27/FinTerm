@@ -29,10 +29,10 @@ void click(Layout* l)
   Logger_Log("clicked\n");
 }
 
-Layout* buildTriple(LayoutOrientation o)
+Layout* buildTriple(LayoutStrategy o)
 {
   Layout* r = Layout_Create();
-  r->orientation = o;
+  r->layoutStrategy = o;
 
   for (int i = 0; i < 3; i++)
   {
@@ -52,9 +52,18 @@ Layout* buildTriple(LayoutOrientation o)
 
 void buildTestGUI(Layout* root)
 {
+  Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
+  Layout_AddChild(root, buildTriple(LayoutStrategy_vert));
+  Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
+  Layout_AddChild(root, buildTriple(LayoutStrategy_vert));
+  Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
+  Layout_AddChild(root, buildTriple(LayoutStrategy_vert));
+
+  root->layoutStrategy = LayoutStrategy_vert;
+  return;
   for (int i = 0; i < 1; i++)
   {
-    Layout_AddChild(root, buildTriple(LayoutOrientation_H));
+    Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
   }
   
   Layout_AddChild(root, (Layout*)Entry_Create());
@@ -71,7 +80,6 @@ void buildTestGUI(Layout* root)
     Layout_AddChild(root, (Layout*)l);
   }
 
-  root->orientation = LayoutOrientation_V;
 }
 
 

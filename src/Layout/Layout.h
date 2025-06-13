@@ -7,7 +7,7 @@
 #include "../InputManager.h"
 #include "../Colors.h"
 
-#define LAYOUT_MAX_DIV  (20)
+#define LAYOUT_MAX_DIV  (50)
 
 // types
 
@@ -24,11 +24,12 @@ typedef enum Alignment
     Alignment_End
 } Alignment;
 
-typedef enum LayoutOrientation
+typedef enum LayoutStrategy
 {
-    LayoutOrientation_V,
-    LayoutOrientation_H
-} LayoutOrientation;
+    LayoutStrategy_vert,
+    LayoutStrategy_horz,
+    LayoutStrategy_abs
+} LayoutStrategy;
 
 // all bubble type events go here
 
@@ -132,17 +133,18 @@ typedef struct Layout
     
     double sizeRatio;
     
-    LayoutOrientation orientation;
+    LayoutStrategy layoutStrategy;
     int absSize;
     int width;
     int height;
-    int abs_x;
-    int abs_y;
+    int x;
+    int y;
     int childrenCount;
     int pad_up;
     int pad_down;
     int pad_left;
     int pad_right;
+    int zindex;
     
     bool redraw;
     bool resize;
@@ -163,6 +165,7 @@ void Layout_SizeRefreshSameParams(Layout* l, bool force);
 bool Layout_AddChild(Layout * parent, Layout * child);
 void Layout_SetVis(Layout * l, bool visible);
 void Layout_SetSize(Layout * l, int size, bool isAbs);
+bool Layout_SetZIndex(Layout* l, int zindex);
 
 void Layout_DetatchFromParent(Layout * child);
 Layout * Layout_RemoveChildIdx(Layout * parent, int idx);
