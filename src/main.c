@@ -63,6 +63,8 @@ void addFloatingWindows(Layout* root)
   
   Layout_AddChild(root, (Layout*)e2);
   Layout_AddChild(root, (Layout*)e1);
+
+ Layout_SetVis((Layout*)e2, false);
 }
 
 void addSizedWindows(Layout* root)

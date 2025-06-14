@@ -15,6 +15,7 @@ void removeArrayItem(void* arr, int eleSize, int eleCount, int idx);
 void drawPhase1(Layout* l, bool force);
 void drawPhase2(Layout* l);
 bool insert_child_by_zindex(Layout* parent, Layout* child);
+void refreshPanVis(Layout* l);
 
 void destroyWindow(Layout* l);
 void createWindow(Layout* l);
@@ -154,9 +155,10 @@ bool Layout_AddChild(Layout * parent, Layout * child)
 void Layout_SetVis(Layout * l, bool visible)
 {
     if (!l) return;
-    if (l->visible == visible) return;
     l->visible = visible;
     l->resize = true;
+    l->redraw = true;
+    refreshPanVis(l);
 }
 
 void Layout_SetSize(Layout * l, int size, bool isAbs)
@@ -334,7 +336,7 @@ void DrawThisLayout(Layout * l, bool force)
 
 void Layout_HitTest(Layout * l, int x, int y, Layout* hovBuff[], int hovBuffArrSize, int* hovBuffCurrLen)
 {
-    if (!l || !hovBuffCurrLen || !hovBuff) return;
+    if (!l || !hovBuffCurrLen || !hovBuff || !l->visible) return;
     if (*hovBuffCurrLen >= hovBuffArrSize) return;
     if (!layout_contains_point(l, x, y)) return;
 
@@ -389,7 +391,7 @@ void drawPhase1(Layout* l, bool force)
 }
 void drawPhase2(Layout* l)
 {
-    if (!l) return;
+    if (!l || !l->visible) return;
 
     if (!l->win || !l->pan)
     {
@@ -442,6 +444,19 @@ bool insert_child_by_zindex(Layout* parent, Layout* child)
     return true;
 }
 
+void refreshPanVis(Layout* l)
+{
+    if (!l || !l->pan) return;
+    if (l->visible)
+    {
+        show_panel(l->pan);
+    }
+    else
+    {
+        hide_panel(l->pan);
+    }
+}
+
 void destroyWindow(Layout* l)
 {
     if (!l) return;
@@ -460,6 +475,8 @@ void createWindow(Layout* l)
     l->pan = new_panel(l->win);
 
     l->redraw = true;
+
+    refreshPanVis(l);
 }
 
 void layoutStat_horz(Layout* l, bool force)
