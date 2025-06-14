@@ -56,9 +56,19 @@ Entry * Entry_Create()
     return entry;
 }
 
-void entry_draw(Layout*, WINDOW *win, int x, int y, int width, int height)
+void entry_draw(Layout* l, WINDOW *win, int x, int y, int width, int height)
 {
+    int color = -1;
+
+    if (l->isFocus)
+    {
+        color = DEFATTR_SELECTED_BOX();
+        Logger_Log("ASDASD: %d\n", color);
+    }
+    
+    if (color >= 0) wattron(win, COLOR_PAIR(color));
     box(win, 0, 0);
+    if (color >= 0) wattroff(win, COLOR_PAIR(color));
 }
 
 void entry_onDestroy(Layout* l)
@@ -68,11 +78,12 @@ void entry_onDestroy(Layout* l)
 
 void entry_onFocus(Layout* l)
 {
-    
+    l->redraw = true;
 }
 
 void entry_onUnFocus(Layout* l)
 {
+    l->redraw = true;
     entry_setTabInput((Entry*)l, false);
 }
 
@@ -108,12 +119,12 @@ void entry_onBblEvt(Layout* l, BblEvt* e)
 
 void entry_onPtrEnter(Layout* l, InputEvent* e)
 {
-    l->redraw = true;
+
 }
 
 void entry_onPtrExit(Layout* l, InputEvent* e)
 {
-    l->redraw = true;
+
 }
 
 void entry_onPtrMove(Layout* l, InputEvent* e)

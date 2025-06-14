@@ -118,7 +118,7 @@ void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height, bool fo
     }
     else if (l->layoutStrategy == LayoutStrategy_abs)
     {
-        layoutStat_abs(l, force);
+        layoutStat_abs(l, true);
     }
 }
 

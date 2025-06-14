@@ -3,7 +3,8 @@
 #include <ncursesw/ncurses.h>
 
 #define ATTR_START      (1)
-#define COLOR_COUNT     (8 + 1)
+#define BASE_COUNT      (16)
+#define COLOR_COUNT     (BASE_COUNT + 1)
 
 typedef struct ColorPair
 {
@@ -47,7 +48,7 @@ void Colors_Init()
 
 int Colors_GetAttr(int fg, int bg)
 {
-    if (fg < -1 || fg > COLOR_WHITE || bg < -1 || bg > COLOR_WHITE) return -1;
+    if (fg < -1 || fg > BASE_COUNT || bg < -1 || bg > BASE_COUNT) return -1;
     fg++;
     bg++;
 

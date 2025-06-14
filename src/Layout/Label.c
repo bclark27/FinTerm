@@ -103,14 +103,15 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
 {
     if (!l) return;
 
-    int color = Colors_GetAttr(7, -1);
-    wattron(win, COLOR_PAIR(color));
     Label * label = (Label*)l;
     if (l->isFocus)
     {
+        int color = DEFATTR_SELECTED_BOX();
+        wattron(win, COLOR_PAIR(color));
         box(win, 0, 0);
+        wattroff(win, COLOR_PAIR(color));
     }
-
+    
     char* wrappedText = label_wrapText(label->str, width, label->textWrap);
 
     if (!label->strDisposed && wrappedText)
@@ -205,7 +206,6 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     {
         free(wrappedText);
     }
-    wattroff(win, COLOR_PAIR(color));
 }
 
 void label_onDestroy(Layout* l)
@@ -215,12 +215,12 @@ void label_onDestroy(Layout* l)
 
 void label_onPtrEnter(Layout* l, InputEvent* e)
 {
-    l->redraw = true;
+
 }
 
 void label_onPtrExit(Layout* l, InputEvent* e)
 {
-    l->redraw = true;
+
 }
 
 void label_onPtrMove(Layout* l, InputEvent* e)

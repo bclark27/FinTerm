@@ -43,25 +43,22 @@ void InputManager_Destroy()
 void InputManager_Update()
 {
     if (!manager_init) return;
-
     int ch;
     int count = 0;
     while ((ch = getch()) != 0)
     {
         if (ch == ERR) break;
-
+        
         // get the next circular buffer idx
         int nextIdx = manager.currBuffIdx + 1;
         if (nextIdx >= INPUT_EVENT_BUFFER_SIZE) nextIdx = 0;
-
+        
         if (parseCh(ch, &manager.buffer[nextIdx]))
         {
             manager.currBuffIdx = nextIdx;
             count++;
         }
-        
     }
-
     manager.currUpdateSize = MIN(count, INPUT_EVENT_BUFFER_SIZE);
 }
 

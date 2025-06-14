@@ -50,9 +50,8 @@ Layout* buildTriple(LayoutStrategy o)
   return r;
 }
 
-void buildTestGUI(Layout* root)
+void addFloatingWindows(Layout* root)
 {
-  /*
   Entry* e1 = Entry_Create();
   Layout_SetZIndex((Layout*)e1, 10);
   Layout_SetDims((Layout*)e1, 20, 20, 80, 20);
@@ -64,9 +63,10 @@ void buildTestGUI(Layout* root)
   
   Layout_AddChild(root, (Layout*)e2);
   Layout_AddChild(root, (Layout*)e1);
-  return;
-  
-  */
+}
+
+void addSizedWindows(Layout* root)
+{
   Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
   Layout_AddChild(root, buildTriple(LayoutStrategy_vert));
   Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
@@ -111,8 +111,10 @@ int main()
   InputManager_Init();
   
 
-  Layout * root = GUIManager_GetRoot();
-  buildTestGUI(root);
+  Layout * froot = GUIManager_GetRoot();
+  Layout * aroot = GUIManager_GetSizingRoot();
+  addSizedWindows(aroot);
+  addFloatingWindows(froot);
   GUIManager_LayoutRefresh(true);
 
   while (1)
@@ -131,7 +133,7 @@ int main()
       GUIManager_Draw(false);
       
       //refresh();
-      Logger_Log("Refresh Time: %ldms\n", end - start);
+      //Logger_Log("Refresh Time: %ldms\n", end - start);
     }
   }
 

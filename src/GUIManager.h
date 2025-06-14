@@ -8,6 +8,7 @@
 void GUIManager_Init();
 void GUIManager_Destroy();
 Layout* GUIManager_GetRoot();
+Layout* GUIManager_GetSizingRoot();
 Layout* GUIManager_GetFocused();
 void GUIManager_OnKeys(InputEvent* evts, int count);
 void GUIManager_QueueEvent(BblEvt evt);

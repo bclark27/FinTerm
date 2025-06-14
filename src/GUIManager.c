@@ -9,9 +9,12 @@
 #define MAX_DEPTH   (2000)
 #define MAX_EVT_Q   (2000)
 
+extern int ESCDELAY;
+
 typedef struct GUIManager
 {
     Layout* root;
+    Layout* autoSizingRoot;
     Layout* focused;
     int hovBuffCurrSize;
     Layout* hovBuffer[MAX_DEPTH];
@@ -46,7 +49,7 @@ void fill_window(WINDOW* win, chtype ch);
 
 // layout vtable
 
-static Layout_VT vtable = 
+static Layout_VT rootVTable = 
 {
     .draw = root_draw,
     .onDestroy = NULL,
@@ -64,8 +67,10 @@ static Layout_VT vtable =
 void GUIManager_Init()
 {
     if (manager.init) return;
+    manager.init = true;
 
     initscr();
+    ESCDELAY = 25;
     setlocale(LC_ALL, "en_US.UTF-8");
     start_color();
     use_default_colors();
@@ -73,19 +78,24 @@ void GUIManager_Init()
     noecho();
     cbreak();
     nodelay(stdscr, TRUE);
+    timeout(0);
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);  // Enable mouse events
-
     Colors_Init();
 
     manager.hovBuffCurrSize = 0;
-    manager.init = true;
+
     manager.root = Layout_Create();
-    manager.root->vtable = vtable;
+    manager.autoSizingRoot = Layout_Create();
+    Layout_AddChild(manager.root, manager.autoSizingRoot);
+
     Layout_SetLayoutStrategy(manager.root, LayoutStrategy_horz);
+    Layout_SetLayoutStrategy(manager.root, LayoutStrategy_abs);
+    manager.root->vtable = rootVTable;
     manager.currEventQueueIdx = 0;
     manager.eventQueueSize = 0;
     manager.forceRedraw = true;
-    GUIManager_LayoutRefresh(true);
+    
+    
     
     GUIManager_LayoutRefresh(true);
     GUIManager_Draw(true);
@@ -97,6 +107,7 @@ void GUIManager_Destroy()
     if (!manager.init) return;
     Layout_Destroy(manager.root);
     manager.root = NULL;
+    manager.autoSizingRoot = NULL;
     manager.init = false;
 }
 
@@ -104,6 +115,12 @@ Layout* GUIManager_GetRoot()
 {
     if (!manager.init) return NULL;
     return manager.root;
+}
+
+Layout* GUIManager_GetSizingRoot()
+{
+    if (!manager.init) return NULL;
+    return manager.autoSizingRoot;
 }
 
 Layout* GUIManager_GetFocused()
@@ -177,8 +194,14 @@ void GUIManager_LayoutRefresh(bool force)
     int r,c;
     getCurrTermSize(&r, &c);
 
-    if (manager.root->width != c || manager.root->height != r || force)
+    if (manager.root->width != c || manager.root->height != r ||
+        manager.autoSizingRoot->width != c || manager.autoSizingRoot->height != r || force)
     {
+        manager.autoSizingRoot->y_rel = 0;
+        manager.autoSizingRoot->x_rel = 0;
+        manager.autoSizingRoot->height = r;
+        manager.autoSizingRoot->width = c;
+        manager.autoSizingRoot->resize = true;
         Layout_SizeRefresh(manager.root, 0, 0, c, r, force);
         manager.forceRedraw = true;
     }
@@ -619,19 +642,13 @@ void depthFirstSizeRef(Layout* l)
 
 void root_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
 {
-    fill_window(win, 'A');
-}
-
-void fill_window(WINDOW* win, chtype ch)
-{
     if (!win) return;
 
-    int height, width;
-    getmaxyx(win, height, width);
+    chtype ch = 'r';
 
-    for (int y = 0; y < height; ++y)
+    for (int y = 0; y < l->height; ++y)
     {
-        for (int x = 0; x < width; ++x)
+        for (int x = 0; x < l->width; ++x)
         {
             mvwaddch(win, y, x, ch);
         }
