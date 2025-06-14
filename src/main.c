@@ -121,24 +121,17 @@ int main()
     if (now - lastTime >= REF_TIME)
     {
       lastTime = now;
-      
-      long s,e;
-      s = current_time();
-      
       GUIManager_LayoutRefresh(false);
+      long start = current_time();
       InputManager_Update();
+      long end = current_time();
       InputManager_GetKeyEvents(events, &events_count);
       GUIManager_OnKeys(events, events_count);
       GUIManager_HandleEventQueue();
-      GUIManager_Draw(true);
+      GUIManager_Draw(false);
       
-      e = current_time();
-      //Logger_Log("Render Time: %ldms\n", e - s);
-
-      s = current_time();
-      refresh();
-      e = current_time();
-      //Logger_Log("Refresh Time: %ldms\n", e - s);
+      //refresh();
+      Logger_Log("Refresh Time: %ldms\n", end - start);
     }
   }
 

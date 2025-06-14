@@ -84,14 +84,12 @@ void GUIManager_Init()
     Layout_SetLayoutStrategy(manager.root, LayoutStrategy_horz);
     manager.currEventQueueIdx = 0;
     manager.eventQueueSize = 0;
+    manager.forceRedraw = true;
     GUIManager_LayoutRefresh(true);
     
-    for (int i = 0; i < 2; i++)
-    {
-        GUIManager_LayoutRefresh(true);
-        GUIManager_Draw(true);
-        refresh();
-    }
+    GUIManager_LayoutRefresh(true);
+    GUIManager_Draw(true);
+
 }
 
 void GUIManager_Destroy()

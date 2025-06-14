@@ -16,6 +16,9 @@ void drawPhase1(Layout* l, bool force);
 void drawPhase2(Layout* l);
 bool insert_child_by_zindex(Layout* parent, Layout* child);
 
+void destroyWindow(Layout* l);
+void createWindow(Layout* l);
+
 void layoutStat_horz(Layout* l, bool force);
 void layoutStat_vert(Layout* l, bool force);
 void layoutStat_abs(Layout* l, bool force);
@@ -73,13 +76,10 @@ void Layout_Destroy(Layout * l)
     {
         Layout_Destroy(l->children[i]);
     }
+
     l->childrenCount = 0;
 
-
-    if (l->pan) del_panel(l->pan);
-    if (l->win) delwin(l->win);
-    l->win = NULL;
-    l->pan = NULL;
+    destroyWindow(l);
     free(l);
 }
 
@@ -96,25 +96,14 @@ void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height, bool fo
     // if the size changed then lets redo the window and mark dirty
     if (!l->pan || !l->win || l->x != x || l->y != y || l->width != width || l->height != height || l->resize || force)
     {
-        if (l->pan)
-        {
-            del_panel(l->pan);
-            l->pan = NULL;
-        }
-
-        if (l->win)
-        {
-            delwin(l->win);
-            l->win = NULL;
-        }
+        destroyWindow(l);
 
         l->height = height;
         l->width = width;
         l->x = x;
         l->y = y;
 
-        l->win = newwin(l->height, l->width, l->y, l->x);
-        l->pan = new_panel(l->win);
+        createWindow(l);
         l->redraw = true;
         l->resize = false;
     }
@@ -376,6 +365,12 @@ void drawPhase1(Layout* l, bool force)
 {
     if (!l) return;
 
+    if (!l->win || !l->pan)
+    {
+        destroyWindow(l);
+        createWindow(l);
+    }
+
     if ((l->redraw || force) && l->win && l->pan)
     {
         l->redraw = false;
@@ -396,7 +391,12 @@ void drawPhase2(Layout* l)
 {
     if (!l) return;
 
-    //if (l->win) wnoutrefresh(l->win);
+    if (!l->win || !l->pan)
+    {
+        destroyWindow(l);
+        createWindow(l);
+    }
+
     if (l->pan) top_panel(l->pan);
 
     for (int i = 0; i < l->childrenCount; i++)
@@ -440,6 +440,26 @@ bool insert_child_by_zindex(Layout* parent, Layout* child)
     parent->children[insertIndex] = child;
     parent->childrenCount++;
     return true;
+}
+
+void destroyWindow(Layout* l)
+{
+    if (!l) return;
+    if (l->pan) del_panel(l->pan);
+    l->pan = NULL;
+    if (l->win) delwin(l->win);
+    l->win = NULL;
+}
+
+void createWindow(Layout* l)
+{
+    if (!l) return;
+    if (l->win || l->pan) destroyWindow(l);
+
+    l->win = newwin(l->height, l->width, l->y, l->x);
+    l->pan = new_panel(l->win);
+
+    l->redraw = true;
 }
 
 void layoutStat_horz(Layout* l, bool force)
