@@ -154,7 +154,7 @@ bool Layout_AddChild(Layout * parent, Layout * child)
 
 void Layout_SetVis(Layout * l, bool visible)
 {
-    if (!l) return;
+    if (!l || l->visible == visible) return;
     l->visible = visible;
     l->resize = true;
     l->redraw = true;
