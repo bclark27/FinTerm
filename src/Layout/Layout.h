@@ -2,6 +2,7 @@
 #define LAYOUT_H_
 
 #include <ncursesw/ncurses.h>
+#include <panel.h>
 
 #include "../Logger.h"
 #include "../InputManager.h"
@@ -126,6 +127,7 @@ typedef struct Layout
     Layout_VT vtable;
 
     WINDOW * win;
+    PANEL * pan;
 
     // this list should be mantained such that all in use children are compressed to the front of the list
     struct Layout * children[LAYOUT_MAX_DIV];
@@ -139,6 +141,8 @@ typedef struct Layout
     int height;
     int x;
     int y;
+    int x_rel;
+    int y_rel;
     int childrenCount;
     int pad_up;
     int pad_down;
@@ -166,6 +170,8 @@ bool Layout_AddChild(Layout * parent, Layout * child);
 void Layout_SetVis(Layout * l, bool visible);
 void Layout_SetSize(Layout * l, int size, bool isAbs);
 bool Layout_SetZIndex(Layout* l, int zindex);
+void Layout_SetLayoutStrategy(Layout* l, LayoutStrategy s);
+void Layout_SetDims(Layout* l, int x, int y, int width, int height);
 
 void Layout_DetatchFromParent(Layout * child);
 Layout * Layout_RemoveChildIdx(Layout * parent, int idx);

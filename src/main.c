@@ -52,6 +52,21 @@ Layout* buildTriple(LayoutStrategy o)
 
 void buildTestGUI(Layout* root)
 {
+  /*
+  Entry* e1 = Entry_Create();
+  Layout_SetZIndex((Layout*)e1, 10);
+  Layout_SetDims((Layout*)e1, 20, 20, 80, 20);
+  
+  Entry* e2 = Entry_Create();
+  Layout_SetZIndex((Layout*)e2, 1);
+  Layout_SetDims((Layout*)e2, 5, 5, 80, 20);
+  
+  
+  Layout_AddChild(root, (Layout*)e2);
+  Layout_AddChild(root, (Layout*)e1);
+  return;
+  
+  */
   Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
   Layout_AddChild(root, buildTriple(LayoutStrategy_vert));
   Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
@@ -59,7 +74,6 @@ void buildTestGUI(Layout* root)
   Layout_AddChild(root, buildTriple(LayoutStrategy_horz));
   Layout_AddChild(root, buildTriple(LayoutStrategy_vert));
 
-  root->layoutStrategy = LayoutStrategy_vert;
   return;
   for (int i = 0; i < 1; i++)
   {
@@ -116,7 +130,7 @@ int main()
       InputManager_GetKeyEvents(events, &events_count);
       GUIManager_OnKeys(events, events_count);
       GUIManager_HandleEventQueue();
-      GUIManager_Draw(false);
+      GUIManager_Draw(true);
       
       e = current_time();
       //Logger_Log("Render Time: %ldms\n", e - s);

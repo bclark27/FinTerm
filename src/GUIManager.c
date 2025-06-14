@@ -19,6 +19,7 @@ typedef struct GUIManager
     int currEventQueueIdx;
     BblEvt eventQueue[MAX_EVT_Q];
     bool init;
+    bool forceRedraw;
 } GUIManager;
 
 static GUIManager manager;
@@ -40,12 +41,14 @@ int treeSize(Layout* node, bool includeInvisible);
 Layout* getNextTabNav(bool forward);
 void freezeEventQueue(BblEvt* buffer, int* size);
 void depthFirstSizeRef(Layout* l);
+void root_draw(Layout*l , WINDOW *win, int x, int y, int width, int height);
+void fill_window(WINDOW* win, chtype ch);
 
 // layout vtable
 
 static Layout_VT vtable = 
 {
-    .draw = NULL,
+    .draw = root_draw,
     .onDestroy = NULL,
     .onPtrEnter = NULL,
     .onPtrExit = NULL,
@@ -78,6 +81,7 @@ void GUIManager_Init()
     manager.init = true;
     manager.root = Layout_Create();
     manager.root->vtable = vtable;
+    Layout_SetLayoutStrategy(manager.root, LayoutStrategy_horz);
     manager.currEventQueueIdx = 0;
     manager.eventQueueSize = 0;
     GUIManager_LayoutRefresh(true);
@@ -178,6 +182,7 @@ void GUIManager_LayoutRefresh(bool force)
     if (manager.root->width != c || manager.root->height != r || force)
     {
         Layout_SizeRefresh(manager.root, 0, 0, c, r, force);
+        manager.forceRedraw = true;
     }
     else
     {
@@ -187,7 +192,9 @@ void GUIManager_LayoutRefresh(bool force)
 
 void GUIManager_Draw(bool force)
 {
-    Layout_Draw(manager.root, force);
+    Layout_Draw(manager.root, force || manager.forceRedraw);
+    manager.forceRedraw = false;
+    update_panels();
     doupdate();
 }
 
@@ -250,14 +257,11 @@ void handleMouseEvent(InputEvent* evt)
 
     bool isFocusEvent = evt->leftClick;
     Layout* target = NULL;
-    for (int i = 0; i < manager.hovBuffCurrSize; i++)
+    for (int i = manager.hovBuffCurrSize - 1; i >= 0; i--)
     {
         if (manager.hovBuffer[i]->focusable)
         {
             target = manager.hovBuffer[i];
-        }
-        else
-        {
             break;
         }
     }
@@ -611,6 +615,27 @@ void depthFirstSizeRef(Layout* l)
         for (int i = 0; i < l->childrenCount; i++)
         {
             depthFirstSizeRef(l->children[i]);
+        }
+    }
+}
+
+void root_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
+{
+    fill_window(win, 'A');
+}
+
+void fill_window(WINDOW* win, chtype ch)
+{
+    if (!win) return;
+
+    int height, width;
+    getmaxyx(win, height, width);
+
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            mvwaddch(win, y, x, ch);
         }
     }
 }

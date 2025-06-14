@@ -76,8 +76,10 @@ void Layout_Destroy(Layout * l)
     l->childrenCount = 0;
 
 
+    if (l->pan) del_panel(l->pan);
     if (l->win) delwin(l->win);
     l->win = NULL;
+    l->pan = NULL;
     free(l);
 }
 
@@ -92,8 +94,14 @@ void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height, bool fo
     if (!l) return;
     
     // if the size changed then lets redo the window and mark dirty
-    if (!l->win || l->x != x || l->y != y || l->width != width || l->height != height || l->resize || force)
+    if (!l->pan || !l->win || l->x != x || l->y != y || l->width != width || l->height != height || l->resize || force)
     {
+        if (l->pan)
+        {
+            del_panel(l->pan);
+            l->pan = NULL;
+        }
+
         if (l->win)
         {
             delwin(l->win);
@@ -106,6 +114,7 @@ void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height, bool fo
         l->y = y;
 
         l->win = newwin(l->height, l->width, l->y, l->x);
+        l->pan = new_panel(l->win);
         l->redraw = true;
         l->resize = false;
     }
@@ -185,6 +194,29 @@ bool Layout_SetZIndex(Layout* l, int zindex)
     l->zindex = zindex;
     if (!l->parent) return true;
     return insert_child_by_zindex(l->parent, l);
+}
+
+void Layout_SetLayoutStrategy(Layout* l, LayoutStrategy s)
+{
+    if (!l) return;
+
+    l->layoutStrategy = s;
+
+    for (int i = 0; i < l->childrenCount; i++)
+    {
+        l->children[i]->resize = true;
+    }
+}
+
+void Layout_SetDims(Layout* l, int x, int y, int width, int height)
+{
+    if (!l) return;
+
+    l->x_rel = x;
+    l->y_rel = y;
+    l->width = width;
+    l->height = height;
+    l->resize = true;
 }
 
 void Layout_DetatchFromParent(Layout * child)
@@ -344,7 +376,7 @@ void drawPhase1(Layout* l, bool force)
 {
     if (!l) return;
 
-    if ((l->redraw || force) && l->win)
+    if ((l->redraw || force) && l->win && l->pan)
     {
         l->redraw = false;
         
@@ -364,7 +396,8 @@ void drawPhase2(Layout* l)
 {
     if (!l) return;
 
-    if (l->win) wnoutrefresh(l->win);
+    //if (l->win) wnoutrefresh(l->win);
+    if (l->pan) top_panel(l->pan);
 
     for (int i = 0; i < l->childrenCount; i++)
     {
@@ -406,7 +439,6 @@ bool insert_child_by_zindex(Layout* parent, Layout* child)
     // Insert the new child
     parent->children[insertIndex] = child;
     parent->childrenCount++;
-
     return true;
 }
 
@@ -442,6 +474,9 @@ void layoutStat_horz(Layout* l, bool force)
 
         curr_x += ans[i];
         
+        l->children[i]->x_rel = c_x - l->x;
+        l->children[i]->y_rel = c_y - l->y;
+
         Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h, force);
     }
 }
@@ -478,6 +513,9 @@ void layoutStat_vert(Layout* l, bool force)
 
         curr_y += ans[i];
 
+        l->children[i]->x_rel = c_x - l->x;
+        l->children[i]->y_rel = c_y - l->y;
+
         Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h, force);
     }
 }
@@ -486,12 +524,19 @@ void layoutStat_abs(Layout* l, bool force)
 {
     if (!l) return;
 
-    int innerWidth = MAX(0, l->width - (l->pad_left + l->pad_right));
-    int innerHeight = MAX(0, l->height - (l->pad_up + l->pad_down));;
+    int c_x;
+    int c_y;
+    int c_w;
+    int c_h;
 
-    int xOffset = l->pad_left;
-    int yOffset = l->pad_up;
+    for (int i = 0; i < l->childrenCount; i++)
+    {
+        c_w = l->children[i]->width;
+        c_h = l->children[i]->height;
 
-    int corner_x = l->x + xOffset;
-    int corner_y = l->y + yOffset;
+        c_x = l->x + l->children[i]->x_rel;
+        c_y = l->y + l->children[i]->y_rel;
+
+        Layout_SizeRefresh(l->children[i], c_x, c_y, c_w, c_h, force);
+    }
 }

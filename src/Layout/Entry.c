@@ -8,6 +8,9 @@ void entry_onDestroy(Layout* l);
 void entry_onFocus(Layout* l);
 void entry_onUnFocus(Layout* l);
 void entry_onBblEvt(Layout* l, BblEvt* e);
+void entry_onPtrEnter(Layout* l, InputEvent* e);
+void entry_onPtrExit(Layout* l, InputEvent* e);
+void entry_onPtrMove(Layout* l, InputEvent* e);
 
 void entry_setTabInput(Entry* entry, bool en);
 void entry_consumeTextChar(Entry* entry, BblEvt_Key* key);
@@ -19,9 +22,9 @@ static Layout_VT vtable =
 {
     .draw = entry_draw,
     .onDestroy = entry_onDestroy,
-    .onPtrEnter = NULL,
-    .onPtrExit = NULL,
-    .onPtrMove = NULL,
+    .onPtrEnter = entry_onPtrEnter,
+    .onPtrExit = entry_onPtrExit,
+    .onPtrMove = entry_onPtrMove,
     .onFocus = entry_onFocus,
     .onUnFocus = entry_onUnFocus,
     .onBblEvt = entry_onBblEvt,
@@ -101,6 +104,21 @@ void entry_onBblEvt(Layout* l, BblEvt* e)
             entry_setTabInput(this, true);
         }
     }
+}
+
+void entry_onPtrEnter(Layout* l, InputEvent* e)
+{
+    l->redraw = true;
+}
+
+void entry_onPtrExit(Layout* l, InputEvent* e)
+{
+    l->redraw = true;
+}
+
+void entry_onPtrMove(Layout* l, InputEvent* e)
+{
+
 }
 
 void entry_setTabInput(Entry* entry, bool en)

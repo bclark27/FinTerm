@@ -3,7 +3,7 @@ CC := gcc
 CCFLAGS := -Wall
 DBGFLAGS := -Wall -Werror -g
 CCOBJFLAGS := $(CCFLAGS) -c
-LIBS := -lm -lncursesw -lpanel
+LIBS := -lm -lncursesw -lpanelw
 
 # Compile macros
 TARGET_NAME := finterm
