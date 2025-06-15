@@ -8,7 +8,7 @@
 #include "../InputManager.h"
 #include "../Colors.h"
 
-#define LAYOUT_MAX_DIV  (50)
+#define LAYOUT_MAX_DIV  (100)
 
 // types
 

@@ -13,6 +13,8 @@ void staticList_onBblEvt(Layout* l, BblEvt* e);
 
 void staticList_refreshPaddings(StaticList* sl);
 void staticList_createlabelChildren(StaticList* sl, int count);
+void staticList_disposeStr(StaticList* sl);
+void staticList_refreshLabelDims(StaticList* sl);
 
 // vtable
 
@@ -39,16 +41,48 @@ StaticList * StaticList_Create()
     Layout_Init((Layout*)sl);
     sl->layout.vtable = vtable;
     sl->layout.layoutStrategy = LayoutStrategy_vert;
+    sl->itemSize = 1;
     return sl;
 }
 
-void StaticList_SetStrListPtr(StaticList* sl, char*** strListPtr, int len)
+void StaticList_SetStrListPtr(StaticList* sl, char** strListPtr, int len)
 {
     if (!sl) return;
+    staticList_disposeStr(sl);
+    sl->layout.redraw = true;
+    if (!strListPtr) return;
+
+    sl->strDisposed = false;
+    sl->strIsCpy = false;
 
     sl->strListPtr = strListPtr;
     sl->strListLen = len;
+}
+
+void StaticList_SetStrListCpy(StaticList* sl, char** strList, int len)
+{
+    if (!sl) return;
+    staticList_disposeStr(sl);
     sl->layout.redraw = true;
+    if (!strList) return;
+
+    sl->strDisposed = false;
+    sl->strIsCpy = true;
+    
+    sl->strListLen = len;
+    sl->strListPtr = malloc(sizeof(char*) * len);
+
+    for (int i = 0; i < len; i++)
+    {
+        sl->strListPtr[i] = NULL;
+        if (strList[i])
+        {
+            int l = strlen(strList[i]) + 1;
+            sl->strListPtr[i] = malloc(l);
+            strcpy(sl->strListPtr[i], strList[i]);
+            sl->strListPtr[i][l] = 0;
+        }
+    }
 }
 
 void StaticList_SetInnerPad(StaticList* sl, int pad_up, int pad_down, int pad_left, int pad_right)
@@ -99,7 +133,19 @@ void staticList_draw(Layout* l, WINDOW *win, int x, int y, int width, int height
         if (bcolor >= 0) wattroff(win, COLOR_PAIR(bcolor));
     }
 
-    if (!sl->strListPtr || sl->strListLen <= 0) return;
+    int count = 0;
+    if (sl->strListPtr && sl->strListLen > 0)
+    { 
+        count = sl->strListLen;
+    }
+
+    staticList_createlabelChildren(sl, count);
+
+    for (int i = 0; i < count; i++)
+    {
+        Label* l = (Label*)sl->layout.children[i];
+        Label_SetTextCpy(l, sl->strListPtr[i]);
+    }
 }
 void staticList_onDestroy(Layout* l)
 {
@@ -145,12 +191,47 @@ void staticList_createlabelChildren(StaticList* sl, int count)
         {
             Label* l = Label_Create();
             l->textWrap = false;
-            Layout_AddChild(&sl->layout, l);
+            l->layout.absSize = sl->itemSize;
+            Layout_AddChild(&sl->layout, (Layout*)l);
         }
     }
 
+
     for (int i = 0; i < sl->layout.childrenCount; i++)
     {
-        Layout_SetVis(sl->layout.children[i], i < count);
+        Layout_SetVis((Layout*)sl->layout.children[i], i < count);
+    }
+}
+
+
+void staticList_disposeStr(StaticList* sl)
+{
+    if (!sl) return;
+    if (sl->strDisposed) return;
+    sl->layout.redraw = true;
+    sl->strDisposed = true;
+
+    if (sl->strIsCpy)
+    {
+        if (sl->strListPtr == NULL) return;
+        for (int i = 0; i < sl->strListLen; i++)
+        {
+            free(sl->strListPtr[i]);
+        }
+        free(sl->strListPtr);
+    }
+    
+    sl->strListLen = 0;
+    sl->strListPtr = NULL;
+}
+
+void staticList_refreshLabelDims(StaticList* sl)
+{
+    if (!sl) return;
+
+    for (int i = 0; i < sl->layout.childrenCount; i++)
+    {
+        Label* l = (Label*)sl->layout.children[i];
+        l->layout.absSize = sl->itemSize;
     }
 }

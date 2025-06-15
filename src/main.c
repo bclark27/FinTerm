@@ -12,9 +12,10 @@
 #include "InputManager.h"
 #include "Layout/Label.h"
 #include "Layout/Entry.h"
+#include "Layout/StaticList.h"
 #include "GUIManager.h"
 
-#define REF_TIME  (50)
+#define REF_TIME  (1000.0 / 30.0)
 
 
 void handle_sigint(int sig) {
@@ -59,12 +60,29 @@ void addFloatingWindows(Layout* root)
   Entry* e2 = Entry_Create();
   Layout_SetZIndex((Layout*)e2, 1);
   Layout_SetDims((Layout*)e2, 5, 5, 80, 20);
-  
-  
+ 
+  StaticList* sl = StaticList_Create();
+  Layout_SetZIndex((Layout*)sl, 100);
+  Layout_SetDims((Layout*)sl, 25, 25, 20, 30);
+  StaticList_SetBoarder(sl, true);
+  char* sampleTexts[] = {
+    "Hello",
+    "World",
+    "Ncurses",
+    "Panel",
+    "Layout",
+    "Focus",
+    "Click",
+    "Draw",
+    "Buffer",
+    "Update"
+  };
+  StaticList_SetStrListCpy(sl, sampleTexts, 10);
+
+
   Layout_AddChild(root, (Layout*)e2);
   Layout_AddChild(root, (Layout*)e1);
-
- Layout_SetVis((Layout*)e2, false);
+  Layout_AddChild(root, (Layout*)sl);
 }
 
 void addSizedWindows(Layout* root)
@@ -136,6 +154,10 @@ int main()
       
       //refresh();
       //Logger_Log("Refresh Time: %ldms\n", end - start);
+    }
+    else
+    {
+      usleep((REF_TIME / 2) * 1000);
     }
   }
 

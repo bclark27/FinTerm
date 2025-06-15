@@ -140,24 +140,20 @@ void entry_setTabInput(Entry* entry, bool en)
 
 void entry_consumeTextChar(Entry* entry, BblEvt_Key* key)
 {
-    bool handled = false;
     if (key->isAscii)
     {
         char* newStr = entry_modifyString(entry->labelChild->str, key->keyCode, false);
         Label_SetTextCpy(entry->labelChild, newStr);
-        handled = true;
     }
     else if (key->raw == KEY_BACKSPACE)
     {
         char* newStr = entry_modifyString(entry->labelChild->str, 0, true);
         Label_SetTextCpy(entry->labelChild, newStr);
-        handled = true;
     }
     else if (key->raw == 0x9)
     {
         char* newStr = entry_modifyString(entry->labelChild->str, '\t', false);
         Label_SetTextCpy(entry->labelChild, newStr);
-        handled = true;
     }
 }
 
