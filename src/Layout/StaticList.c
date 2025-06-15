@@ -162,7 +162,8 @@ void staticList_draw(Layout* l, WINDOW *win, int x, int y, int width, int height
 }
 void staticList_onDestroy(Layout* l)
 {
-
+    StaticList* sl = (StaticList*)l;
+    staticList_disposeStr(sl);
 }
 void staticList_onPtrEnter(Layout* l, InputEvent* e)
 {

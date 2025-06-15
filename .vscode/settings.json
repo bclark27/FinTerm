@@ -6,6 +6,8 @@
         "inputmanager.h": "c",
         "layout.h": "c",
         "label.h": "c",
-        "locale.h": "c"
+        "locale.h": "c",
+        "type_traits": "cpp",
+        "utility": "cpp"
     }
 }
