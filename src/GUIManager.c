@@ -29,7 +29,7 @@ static GUIManager manager;
 
 // declerations
 void rootEvtCapture(Layout* l, BblEvt* e);
-void dispatchMouseEvt(InputEvent* evt, Layout* target);
+void dispatchMouseEvt(InputEvent* evt, Layout* focus_target, Layout* hit_target);
 void focusLayout(Layout* l);
 void handleMouseEvent(InputEvent* evt);
 void getCurrTermSize(int* rows, int* cols);
@@ -149,7 +149,8 @@ void GUIManager_OnKeys(InputEvent* evts, int count)
             be.data.key.keyCode = evts[i].keyCode;
 
             be.handled = false;
-            be.target = target;
+            be.focus_target = target;
+            be.hit_target = target;
             be.type = BblEvtType_Key;
 
             GUIManager_QueueEvent(be);
@@ -230,8 +231,8 @@ void rootEvtCapture(Layout* l, BblEvt* e)
 
         bool doTabNav = ke->raw == 0x9 || ke->raw == KEY_BTAB;
 
-        if (e->target && 
-            e->target->acceptsLiteralTab &&
+        if (e->focus_target && 
+            e->focus_target->acceptsLiteralTab &&
             ke->raw == 0x9)
         {
             doTabNav = false;
@@ -253,9 +254,13 @@ void handleMouseEvent(InputEvent* evt)
 {
     if (!evt->isMouse) return;
 
+
+    
+    
     Layout* newHovBuff[MAX_DEPTH];
     int newHovBuffLen = 0;
     Layout_HitTest(manager.root, evt->mevent.x, evt->mevent.y, newHovBuff, MAX_DEPTH, &newHovBuffLen);
+    
     
     Layout* entering[MAX_DEPTH];
     Layout* exiting[MAX_DEPTH];
@@ -270,24 +275,25 @@ void handleMouseEvent(InputEvent* evt)
         entering, &enteringSize,
         stillHovering, &stillHoveringSize
     );
-    
     memmove(manager.hovBuffer, newHovBuff, newHovBuffLen * sizeof(Layout*));
     manager.hovBuffCurrSize = newHovBuffLen;
 
     bool isFocusEvent = evt->leftClick;
-    Layout* target = NULL;
+    Layout* focus_target = NULL;
     for (int i = manager.hovBuffCurrSize - 1; i >= 0; i--)
     {
         if (manager.hovBuffer[i]->focusable)
         {
-            target = manager.hovBuffer[i];
+            focus_target = manager.hovBuffer[i];
             break;
         }
     }
+    Layout* hit_target = NULL;
+    if (manager.hovBuffCurrSize > 0) hit_target = manager.hovBuffer[manager.hovBuffCurrSize - 1];
 
     if (isFocusEvent)
     {
-        focusLayout(target);
+        focusLayout(focus_target);
     }
 
     for (int k = 0; k < exitingSize; k++)
@@ -318,12 +324,12 @@ void handleMouseEvent(InputEvent* evt)
         }
     }
     
-    dispatchMouseEvt(evt, target);
+    dispatchMouseEvt(evt, focus_target, hit_target);
 }
 
-void dispatchMouseEvt(InputEvent* evt, Layout* target)
+void dispatchMouseEvt(InputEvent* evt, Layout* focus_target, Layout* hit_target)
 {
-    if (!evt || !evt->isMouse || !target) return;
+    if (!evt || !evt->isMouse || !focus_target || !hit_target) return;
     
     if (evt->rightClick ||
         evt->leftClick ||
@@ -331,7 +337,6 @@ void dispatchMouseEvt(InputEvent* evt, Layout* target)
     {
         BblEvt be;
 
-        be.data.click.target = target;
         be.data.click.x = evt->mevent.x;
         be.data.click.y = evt->mevent.y;
         be.data.click.leftClick = evt->leftClick;
@@ -339,7 +344,8 @@ void dispatchMouseEvt(InputEvent* evt, Layout* target)
         be.data.click.midClick = evt->midClick;
 
         be.handled = false;
-        be.target = target;
+        be.focus_target = focus_target;
+        be.hit_target = hit_target;
         be.type = BblEvtType_Click;
 
         GUIManager_QueueEvent(be);
@@ -350,14 +356,14 @@ void dispatchMouseEvt(InputEvent* evt, Layout* target)
     {
         BblEvt be;
 
-        be.data.scroll.target = target;
         be.data.scroll.x = evt->mevent.x;
         be.data.scroll.y = evt->mevent.y;
         be.data.scroll.up = evt->scrollUp;
         be.data.scroll.down = evt->scrollDown;
 
         be.handled = false;
-        be.target = target;
+        be.focus_target = focus_target;
+        be.hit_target = hit_target;
         be.type = BblEvtType_Scroll;
 
         GUIManager_QueueEvent(be);
@@ -379,7 +385,8 @@ void focusLayout(Layout* l)
             be.data.focus.target = manager.focused;
 
             be.handled = false;
-            be.target = manager.focused;
+            be.focus_target = manager.focused;
+            be.hit_target = manager.focused;
             be.type = BblEvtType_Focus;
 
             GUIManager_QueueEvent(be);
@@ -398,7 +405,8 @@ void focusLayout(Layout* l)
             be.data.focus.target = manager.focused;
 
             be.handled = false;
-            be.target = manager.focused;
+            be.focus_target = manager.focused;
+            be.hit_target = manager.focused;
             be.type = BblEvtType_Focus;
 
             GUIManager_QueueEvent(be);
@@ -480,11 +488,11 @@ void compareHovBuffs(Layout* ogHovBuff[], int ogHovBuffSize,
 
 void doBubble(BblEvt * e)
 {
-    if (!e || !e->target) return;
+    if (!e || !e->hit_target) return;
 
     Layout *stack[MAX_DEPTH];
     int depth = 0;
-    for (Layout *p = e->target; p; p = p->parent) stack[depth++] = p;
+    for (Layout *p = e->hit_target; p; p = p->parent) stack[depth++] = p;
 
     // capture phase
     for (int i = depth - 1; i >= 0; --i) 

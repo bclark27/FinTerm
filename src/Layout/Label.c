@@ -39,6 +39,9 @@ Label * Label_Create()
     Label * label = calloc(1, sizeof(Label));
     Layout_Init((Layout*)label);
     ((Layout*)label)->vtable = vtable;
+    label->highlight = -1;
+    label->textColor = -1;
+
     return label;
 }
 
@@ -102,6 +105,23 @@ void Label_SetBorder(Label *label, bool border)
     if (!label) return;
     if (label->border == border) return;
     label->border = border;
+    label->layout.redraw = true;
+}
+
+void Label_SetHighlight(Label *label, int highlight)
+{
+    if (!label) return;
+    if (label->highlight == highlight) return;
+    label->highlight = highlight;
+    label->layout.redraw = true;
+}
+
+void Label_SetTextColor(Label *label, int textColor)
+{
+    if (!label) return;
+    if (label->textColor == textColor) return;
+    label->textColor = textColor;
+    label->layout.redraw = true;
 }
 
 // priv
@@ -126,6 +146,9 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     height = innerHeight;
 
     char* wrappedText = label_wrapText(label->str, width, label->textWrap);
+
+    color = Colors_GetAttr(label->textColor, label->highlight);
+    if (color >= 0) wattron(win, COLOR_PAIR(color));
 
     if (!label->strDisposed && wrappedText)
     {
@@ -214,6 +237,8 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
             }
         }
     }
+
+    if (color >= 0) wattroff(win, COLOR_PAIR(color));
 
     if (wrappedText)
     {

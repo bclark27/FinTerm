@@ -48,7 +48,6 @@ typedef enum BblEvtType
 
 typedef struct BblEvt_Click
 {
-    struct Layout* target;
     int x;
     int y;
     bool leftClick;
@@ -67,7 +66,6 @@ typedef struct BblEvt_Key
 
 typedef struct BblEvt_Scroll
 {
-    struct Layout* target;
     int x;
     int y;
     bool up;
@@ -82,7 +80,8 @@ typedef struct BblEvt_Focus
 
 typedef struct BblEvt
 {
-    struct Layout* target;
+    struct Layout* focus_target;
+    struct Layout* hit_target;
     BblEvtType type;
     bool handled;
     union
