@@ -97,6 +97,13 @@ void Label_SetTextFmt(Label *label, const char *fmt, ...) {
     ((Layout*)label)->redraw = true;
 }
 
+void Label_SetBorder(Label *label, bool border)
+{
+    if (!label) return;
+    if (label->border == border) return;
+    label->border = border;
+}
+
 // priv
 
 void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
@@ -104,14 +111,20 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
     if (!l) return;
 
     Label * label = (Label*)l;
-    if (l->isFocus)
-    {
-        int color = DEFATTR_SELECTED_BOX();
-        wattron(win, COLOR_PAIR(color));
-        box(win, 0, 0);
-        wattroff(win, COLOR_PAIR(color));
-    }
+    int color = DEFATTR_SELECTED_BOX();
+    if (l->isFocus && color >= 0) wattron(win, COLOR_PAIR(color));
+    if (label->border) box(win, 0, 0);
+    if (l->isFocus && color >= 0) wattroff(win, COLOR_PAIR(color));
     
+    int innerWidth = MAX(0, l->width - (l->pad_left + l->pad_right));
+    int innerHeight = MAX(0, l->height - (l->pad_up + l->pad_down));;
+
+    int xOffset = l->pad_left;
+    int yOffset = l->pad_up;
+
+    width = innerWidth;
+    height = innerHeight;
+
     char* wrappedText = label_wrapText(label->str, width, label->textWrap);
 
     if (!label->strDisposed && wrappedText)
@@ -120,8 +133,8 @@ void label_draw(Layout*l , WINDOW *win, int x, int y, int width, int height)
         int textWidth = label_textWidth(label);
         int textWidth_2 = textWidth / 2;
         int lc = label_lineCount(label);
-        int corner_x = 0;
-        int corner_y = 0;
+        int corner_x = xOffset;
+        int corner_y = yOffset;
         int height_2 = height / 2;
         int width_2 = width / 2;
 

@@ -88,14 +88,12 @@ void GUIManager_Init()
     manager.autoSizingRoot = Layout_Create();
     Layout_AddChild(manager.root, manager.autoSizingRoot);
 
-    Layout_SetLayoutStrategy(manager.root, LayoutStrategy_horz);
+    Layout_SetLayoutStrategy(manager.autoSizingRoot, LayoutStrategy_horz);
     Layout_SetLayoutStrategy(manager.root, LayoutStrategy_abs);
     manager.root->vtable = rootVTable;
     manager.currEventQueueIdx = 0;
     manager.eventQueueSize = 0;
     manager.forceRedraw = true;
-    
-    
     
     GUIManager_LayoutRefresh(true);
     GUIManager_Draw(true);
@@ -558,7 +556,7 @@ Layout* find_prev_focusable(Layout *root, Layout *current)
     return find_prev_focusable_internal(root, NULL, &dummy);
 }
 
-Layout* find_next_focusable_internal(Layout *node, Layout *current, bool *foundCurrent) 
+Layout* find_next_focusable_internal(Layout *node, Layout *current, bool *foundCurrent)
 {
     if (!node || !node->visible || !node->focusable) return NULL;
 

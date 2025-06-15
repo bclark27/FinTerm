@@ -233,5 +233,6 @@ void staticList_refreshLabelDims(StaticList* sl)
     {
         Label* l = (Label*)sl->layout.children[i];
         l->layout.absSize = sl->itemSize;
+        l->layout.resize = true;
     }
 }

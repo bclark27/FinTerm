@@ -7,8 +7,12 @@
 #include "../Logger.h"
 #include "../InputManager.h"
 #include "../Colors.h"
+#include "../Common.h"
 
 #define LAYOUT_MAX_DIV  (100)
+
+#define LF_REDRAW        (0x1)
+#define LF_RESIZE        (0x2)
 
 // types
 

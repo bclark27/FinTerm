@@ -10,7 +10,6 @@
 // PRIV DECLERATIONS
 bool layout_contains_point(Layout *layout, int x, int y);
 void compute_layout_sizes(int total_size, struct Layout** elements, int* ret, int count);
-void DrawThisLayout(Layout * l, bool force);
 void removeArrayItem(void* arr, int eleSize, int eleCount, int idx);
 void drawPhase1(Layout* l, bool force);
 void drawPhase2(Layout* l);
@@ -316,21 +315,6 @@ void compute_layout_sizes(int total_size, struct Layout** elements, int* ret, in
         } else {
             break;
         }
-    }
-}
-
-
-void DrawThisLayout(Layout * l, bool force)
-{
-    if (!l) return;
-
-    if ((l->redraw || force) && l->win)
-    {
-        l->redraw = false;
-        
-        werase(l->win);
-        if (l->vtable.draw) l->vtable.draw(l, l->win, l->x, l->y, l->width, l->height);
-        wnoutrefresh(l->win);
     }
 }
 

@@ -42,7 +42,8 @@ Layout* buildTriple(LayoutStrategy o)
     Label_SetTextFmt(l, "hello\n1");
     l->textOption = LabelTextOptions_Center;
     l->horzAlign = Alignment_Start + i;
-    l->vertAlign = Alignment_Start;// + i;
+    l->vertAlign = Alignment_Start;
+    l->border = true;
     Layout_AddChild(r, (Layout*)l);
 
     if (i == 0) dissapear = (Layout*)l;
