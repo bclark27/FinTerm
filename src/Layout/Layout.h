@@ -11,8 +11,8 @@
 
 #define LAYOUT_MAX_DIV  (100)
 
-#define LF_REDRAW        (0x1)
-#define LF_RESIZE        (0x2)
+#define REDRAW(l)    (((Layout*)(l))->redraw = true)
+#define RESIZE(l)    (((Layout*)(l))->resize = true)
 
 // types
 

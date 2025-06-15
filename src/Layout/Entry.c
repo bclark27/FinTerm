@@ -78,12 +78,12 @@ void entry_onDestroy(Layout* l)
 
 void entry_onFocus(Layout* l)
 {
-    l->redraw = true;
+    REDRAW(l);
 }
 
 void entry_onUnFocus(Layout* l)
 {
-    l->redraw = true;
+    REDRAW(l);
     entry_setTabInput((Entry*)l, false);
 }
 

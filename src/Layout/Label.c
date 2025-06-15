@@ -63,7 +63,7 @@ void Label_SetTextCpy(Label * label, char* str)
 
     label->strIsCpy = true;
     label->strDisposed = false;
-    ((Layout*)label)->redraw = true;
+    REDRAW(label);
 }
 
 void Label_SetTextPtr(Label * label, char* str)
@@ -72,7 +72,7 @@ void Label_SetTextPtr(Label * label, char* str)
     label->str = str;
     label->strIsCpy = false;
     label->strDisposed = false;
-    ((Layout*)label)->redraw = true;
+    REDRAW(label);
 }
 
 void Label_SetTextFmt(Label *label, const char *fmt, ...) {
@@ -97,7 +97,7 @@ void Label_SetTextFmt(Label *label, const char *fmt, ...) {
 
     label->strIsCpy = false;
     label->strDisposed = false;
-    ((Layout*)label)->redraw = true;
+    REDRAW(label);
 }
 
 void Label_SetBorder(Label *label, bool border)
@@ -105,7 +105,7 @@ void Label_SetBorder(Label *label, bool border)
     if (!label) return;
     if (label->border == border) return;
     label->border = border;
-    label->layout.redraw = true;
+    REDRAW(label);
 }
 
 void Label_SetHighlight(Label *label, int highlight)
@@ -113,7 +113,7 @@ void Label_SetHighlight(Label *label, int highlight)
     if (!label) return;
     if (label->highlight == highlight) return;
     label->highlight = highlight;
-    label->layout.redraw = true;
+    REDRAW(label);
 }
 
 void Label_SetTextColor(Label *label, int textColor)
@@ -121,7 +121,7 @@ void Label_SetTextColor(Label *label, int textColor)
     if (!label) return;
     if (label->textColor == textColor) return;
     label->textColor = textColor;
-    label->layout.redraw = true;
+    REDRAW(label);
 }
 
 // priv
@@ -268,12 +268,12 @@ void label_onPtrMove(Layout* l, InputEvent* e)
 
 void label_onFocus(Layout* l)
 {
-    l->redraw = true;
+    REDRAW(l);
 }
 
 void label_onUnFocus(Layout* l)
 {
-    l->redraw = true;
+    REDRAW(l);
 }
 
 void label_disposeStr(Label * label)

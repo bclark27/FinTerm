@@ -110,7 +110,7 @@ void StaticList_SetBoarder(StaticList* sl, bool hasBoarder)
     sl->layout.pad_down = hasBoarder;
     sl->layout.pad_left = hasBoarder;
     sl->layout.pad_right = hasBoarder;
-    sl->layout.redraw = true;
+    REDRAW(sl);
 }
 
 void StaticList_SetDirection(StaticList* sl, LayoutStrategy dir)
@@ -118,7 +118,6 @@ void StaticList_SetDirection(StaticList* sl, LayoutStrategy dir)
     if (!sl) return;
 
     sl->layout.layoutStrategy = dir;
-    sl->layout.redraw = true;
 }
 
 // PRIV
@@ -172,7 +171,7 @@ void staticList_onPtrExit(Layout* l, InputEvent* e)
 {
     StaticList* sl = (StaticList*)l;
     sl->hoverIdx = -1;
-    l->redraw = true;
+    REDRAW(l);
 }
 void staticList_onPtrMove(Layout* l, InputEvent* e)
 {
@@ -180,11 +179,11 @@ void staticList_onPtrMove(Layout* l, InputEvent* e)
 }
 void staticList_onFocus(Layout* l)
 {
-    l->redraw = true;
+    REDRAW(l);
 }
 void staticList_onUnFocus(Layout* l)
 {
-    l->redraw = true;
+    REDRAW(l);
 }
 void staticList_onBblEvt(Layout* l, BblEvt* e)
 {
@@ -192,7 +191,7 @@ void staticList_onBblEvt(Layout* l, BblEvt* e)
     if (e->type == BblEvtType_Scroll)
     {
         sl->scrollIdx += e->data.scroll.up ? -1 : 1;
-        l->redraw = true;
+        REDRAW(sl);
     }
     else if (e->type == BblEvtType_Click && e->data.click.leftClick)
     {
@@ -218,7 +217,7 @@ void staticList_onBblEvt(Layout* l, BblEvt* e)
             sl->selectIdx = -1;
         }
 
-        l->redraw = prev != sl->selectIdx;
+        if (prev != sl->selectIdx) REDRAW(sl);
     }
     else if (e->type == BblEvtType_Key)
     {
@@ -245,13 +244,39 @@ void staticList_onBblEvt(Layout* l, BblEvt* e)
                 sl->scrollIdx = sl->hoverIdx - MAX_VIS_COUNT(sl) + 1;
             }
 
-            l->redraw = true;
+            REDRAW(sl);
         }
         else if (e->data.key.raw == 10 && e->data.key.isCtrl)
         {
             sl->selectIdx = sl->hoverIdx;
-            l->redraw = true;
+            REDRAW(sl);
         }
+    }
+    else if (e->type == BblEvtType_Focus)
+    {
+        if (e->hit_target == l) return;
+        // if the target is one of the child labels then set that guy
+        int hitIdx = -1;
+        for (int i = 0; i < l->childrenCount; i++)
+        {
+            if (l->children[i] == e->hit_target)
+            {
+                hitIdx = i;
+                break;
+            }
+        }
+
+        int prev = sl->hoverIdx;
+        if (hitIdx >= 0)
+        {
+            sl->hoverIdx = sl->labelToItemIdx[hitIdx];
+        }
+        else
+        {
+            sl->hoverIdx = -1;
+        }
+
+        if (prev != sl->hoverIdx) REDRAW(sl);
     }
 }
 
@@ -339,7 +364,7 @@ void staticList_refreshLabelDims(StaticList* sl)
     {
         Label* l = (Label*)sl->layout.children[i];
         l->layout.absSize = sl->itemSize;
-        l->layout.resize = true;
+        RESIZE(l);
     }
 }
 
@@ -395,5 +420,5 @@ void staticList_hoverLabel(StaticList* sl, int x, int y)
         }
     }
 
-    sl->layout.redraw = curr != sl->hoverIdx;
+    if (curr != sl->hoverIdx) REDRAW(sl);
 }
