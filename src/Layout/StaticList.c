@@ -227,14 +227,29 @@ void staticList_onBblEvt(Layout* l, BblEvt* e)
         {
             if (sl->hoverIdx < 0)
             {
-                sl->hoverIdx = sl->scrollIdx;
+                sl->hoverIdx = sl->selectIdx >= 0 ? sl->selectIdx : sl->scrollIdx;
             }
             else
             {
                 sl->hoverIdx += e->data.key.raw == KEY_UP ? -1 : 1;
                 sl->hoverIdx = MAX(sl->hoverIdx, 0);
-                sl->hoverIdx = MIN(sl->hoverIdx, sl->strListLen - 1);
+                sl->hoverIdx = MIN(sl->hoverIdx, sl->strListLen - 1);   
             }
+
+            if (sl->hoverIdx < sl->scrollIdx)
+            {
+                sl->scrollIdx = sl->hoverIdx;
+            }
+            if (sl->hoverIdx >= sl->scrollIdx + MAX_VIS_COUNT(sl))
+            {
+                sl->scrollIdx = sl->hoverIdx - MAX_VIS_COUNT(sl) + 1;
+            }
+
+            l->redraw = true;
+        }
+        else if (e->data.key.raw == 10 && e->data.key.isCtrl)
+        {
+            sl->selectIdx = sl->hoverIdx;
             l->redraw = true;
         }
     }
