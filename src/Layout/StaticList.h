@@ -17,6 +17,10 @@ typedef struct StaticList
     int hoverIdx;
     bool boarder;
 
+    bool listenScrollEvt;
+    bool listenHoverEvt;
+    bool listenSelectEvt;
+
     bool strIsCpy;
     bool strDisposed;
 

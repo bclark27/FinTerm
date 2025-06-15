@@ -66,6 +66,9 @@ void addFloatingWindows(Layout* root)
   Layout_SetZIndex((Layout*)sl, 100);
   Layout_SetDims((Layout*)sl, 25, 25, 20, 30);
   StaticList_SetBoarder(sl, true);
+  sl->listenScrollEvt = false;
+  sl->listenHoverEvt = false;
+  sl->listenSelectEvt = false;
   char* sampleTexts[] = {
     "Hello",
     "World",

@@ -24,6 +24,7 @@ void staticList_refreshLabelDims(StaticList* sl);
 void staticList_selectLabelAttrs(Label* l, bool selected, bool hover);
 int staticList_listSpaceSize(StaticList* sl);
 void staticList_hoverLabel(StaticList* sl, int x, int y);
+void staticList_selectLabel(StaticList* sl, int x, int y);
 
 // vtable
 
@@ -165,7 +166,8 @@ void staticList_onDestroy(Layout* l)
 }
 void staticList_onPtrEnter(Layout* l, InputEvent* e)
 {
-    staticList_hoverLabel((StaticList*)l, e->mevent.x, e->mevent.y);
+    if (((StaticList*)l)->listenHoverEvt) staticList_hoverLabel((StaticList*)l, e->mevent.x, e->mevent.y);
+    
 }
 void staticList_onPtrExit(Layout* l, InputEvent* e)
 {
@@ -175,7 +177,7 @@ void staticList_onPtrExit(Layout* l, InputEvent* e)
 }
 void staticList_onPtrMove(Layout* l, InputEvent* e)
 {
-    staticList_hoverLabel((StaticList*)l, e->mevent.x, e->mevent.y);
+    if (((StaticList*)l)->listenHoverEvt) staticList_hoverLabel((StaticList*)l, e->mevent.x, e->mevent.y);
 }
 void staticList_onFocus(Layout* l)
 {
@@ -190,40 +192,22 @@ void staticList_onBblEvt(Layout* l, BblEvt* e)
     StaticList* sl = (StaticList*)l;
     if (e->type == BblEvtType_Scroll)
     {
+        if (!sl->listenScrollEvt) return;
+
         sl->scrollIdx += e->data.scroll.up ? -1 : 1;
         REDRAW(sl);
     }
     else if (e->type == BblEvtType_Click && e->data.click.leftClick)
     {
-        if (e->hit_target == l) return;
-        // if the target is one of the child labels then set that guy
-        int hitIdx = -1;
-        for (int i = 0; i < l->childrenCount; i++)
-        {
-            if (l->children[i] == e->hit_target)
-            {
-                hitIdx = i;
-                break;
-            }
-        }
-
-        int prev = sl->selectIdx;
-        if (hitIdx >= 0)
-        {
-            sl->selectIdx = sl->labelToItemIdx[hitIdx];
-        }
-        else
-        {
-            sl->selectIdx = -1;
-        }
-
-        if (prev != sl->selectIdx) REDRAW(sl);
+        if (sl->listenSelectEvt) staticList_selectLabel(sl, e->data.click.x, e->data.click.y);
     }
     else if (e->type == BblEvtType_Key)
     {
         if (e->data.key.raw == KEY_DOWN || 
             e->data.key.raw == KEY_UP)
         {
+            if (!sl->listenScrollEvt) return;
+
             if (sl->hoverIdx < 0)
             {
                 sl->hoverIdx = sl->selectIdx >= 0 ? sl->selectIdx : sl->scrollIdx;
@@ -248,35 +232,12 @@ void staticList_onBblEvt(Layout* l, BblEvt* e)
         }
         else if (e->data.key.raw == 10 && e->data.key.isCtrl)
         {
-            sl->selectIdx = sl->hoverIdx;
-            REDRAW(sl);
-        }
-    }
-    else if (e->type == BblEvtType_Focus)
-    {
-        if (e->hit_target == l) return;
-        // if the target is one of the child labels then set that guy
-        int hitIdx = -1;
-        for (int i = 0; i < l->childrenCount; i++)
-        {
-            if (l->children[i] == e->hit_target)
+            if (sl->listenSelectEvt)
             {
-                hitIdx = i;
-                break;
+                sl->selectIdx = sl->hoverIdx;
+                REDRAW(sl);
             }
         }
-
-        int prev = sl->hoverIdx;
-        if (hitIdx >= 0)
-        {
-            sl->hoverIdx = sl->labelToItemIdx[hitIdx];
-        }
-        else
-        {
-            sl->hoverIdx = -1;
-        }
-
-        if (prev != sl->hoverIdx) REDRAW(sl);
     }
 }
 
@@ -421,4 +382,25 @@ void staticList_hoverLabel(StaticList* sl, int x, int y)
     }
 
     if (curr != sl->hoverIdx) REDRAW(sl);
+}
+
+void staticList_selectLabel(StaticList* sl, int x, int y)
+{
+    int curr = sl->selectIdx;
+    
+    Layout* hovBuff[3];
+    int len = 0;
+    Layout_HitTest(&sl->layout, x, y, hovBuff, 3, &len);
+    
+    Layout* last = hovBuff[len - 1];
+    for (int i = 0; i < sl->layout.childrenCount; i++)
+    {
+        if (sl->layout.children[i] == last)
+        {
+            sl->selectIdx = sl->labelToItemIdx[i];
+            break;
+        }
+    }
+
+    if (curr != sl->selectIdx) REDRAW(sl);
 }
