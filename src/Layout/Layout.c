@@ -106,6 +106,11 @@ void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height, bool fo
         createWindow(l);
         l->redraw = true;
         l->resize = false;
+
+        if (l->vtable.onSizeRefreshed)
+        {
+            l->vtable.onSizeRefreshed(l);
+        }
     }
 
     if (l->layoutStrategy == LayoutStrategy_horz)
@@ -118,7 +123,7 @@ void Layout_SizeRefresh(Layout * l, int x, int y, int width, int height, bool fo
     }
     else if (l->layoutStrategy == LayoutStrategy_abs)
     {
-        layoutStat_abs(l, true);
+        layoutStat_abs(l, force);
     }
 }
 

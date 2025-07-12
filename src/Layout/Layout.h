@@ -111,6 +111,8 @@ typedef void (*OnLayoutUnFocus)(struct Layout* l);
 typedef void (*OnLayoutBblEvt)(struct Layout* l, struct BblEvt* e);
 // called during the root->target pass
 typedef void (*OnLayoutBblEvtCapture)(struct Layout* l, struct BblEvt* e);
+// called whenever the layout changes size, was forced to refresh size, or window/panel was resized / destroyed and recreated during resize loop
+typedef void (*OnLayoutSizeRefreshed)(struct Layout* l);
 
 typedef struct Layout_VT
 {
@@ -123,6 +125,7 @@ typedef struct Layout_VT
     OnLayoutUnFocus onUnFocus;
     OnLayoutBblEvt onBblEvt;
     OnLayoutBblEvtCapture onBblEvtCapture;
+    OnLayoutSizeRefreshed onSizeRefreshed;
 } Layout_VT;
 
 typedef struct Layout

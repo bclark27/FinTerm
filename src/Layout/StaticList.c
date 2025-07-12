@@ -251,6 +251,7 @@ void staticList_ensureLabelCount(StaticList* sl, int count)
             Label* l = Label_Create();
             l->textWrap = false;
             l->layout.absSize = sl->itemSize;
+            l->layout.focusable = false;
             staticList_selectLabelAttrs(l, false, false);
             Layout_AddChild(&sl->layout, (Layout*)l);
         }
